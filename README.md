@@ -1,5 +1,13 @@
 # Masters Thesis
 
+## Cloning the Repository
+
+This repository includes git submodules, so you need to clone it with the `--recurse-submodules` flag:
+
+```bash
+git clone --recurse-submodules https://github.com/atompaule/HRPO.git
+```
+
 ## Prerequisites
 
 -   Python 3.11 or higher

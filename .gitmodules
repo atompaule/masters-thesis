@@ -1,0 +1,3 @@
+[submodule "src/external/hrpo"]
+	path = src/external/hrpo
+	url = https://github.com/atompaule/HRPO.git
