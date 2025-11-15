@@ -136,3 +136,7 @@ dmypy.json
 .DS_Store
 Thumbs.db
 
+# experiments
+unsloth_compiled_cache/
+experiments/
+wandb/

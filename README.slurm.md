@@ -14,7 +14,9 @@ In that new shell:
 
 ```bash
 source .venv/bin/activate
-python src/external/hrpo/hrpo_gsm8k.py
+export http_proxy=http://proxy2.uni-potsdam.de:3128
+export https_proxy=http://proxy2.uni-potsdam.de:3128
+python src/hrpo/hrpo_gsm8k.py
 ```
 
 ## Creating a new SLURM Batch Job
@@ -50,7 +52,7 @@ export https_proxy=http://proxy2.uni-potsdam.de:3128
 source ~/masters-thesis/.venv/bin/activate
 
 # run HRPO script
-python ~/masters-thesis/src/external/hrpo/hrpo_gsm8k.py
+python ~/masters-thesis/src/hrpo/hrpo_gsm8k.py
 ```
 
 ## Queueing a SLURM Batch Job
