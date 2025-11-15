@@ -140,3 +140,5 @@ Thumbs.db
 unsloth_compiled_cache/
 experiments/
 wandb/
+
+*.code-workspace
