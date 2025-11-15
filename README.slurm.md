@@ -76,3 +76,9 @@ Check the job output:
 cd $SCRATCH/jobs/masters-thesis
 cat hrpo_gsm8k.job.out
 ```
+
+To follow logs in real-time as the job runs:
+
+```bash
+tail -f $SCRATCH/masters-thesis/slurm-hrpo-gsm8k-<JOB_ID>.out
+```
