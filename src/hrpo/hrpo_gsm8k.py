@@ -119,7 +119,6 @@ def main(args):
         args.lr_residual_Lambda,
     )
     trainer.train()
-    trainer.save_model(os.path.join(exp_name, "final_model"))
 
 
 if __name__ == "__main__":
