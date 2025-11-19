@@ -2,11 +2,11 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Attach to Debugpy on GPU",
-            "type": "python",
+            "name": "Attach to Debugpy Server on external node",
+            "type": "debugpy",
             "request": "attach",
-            "connect": {
-                "host": "localhost",
+            "listen": {
+                "host": "0.0.0.0",
                 "port": 5678
             },
             "justMyCode": false
