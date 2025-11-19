@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "debugpy>=1.8.17",
     "setuptools>=80.9.0",
     "trl==0.23",
     "unsloth>=2025.9.9",
