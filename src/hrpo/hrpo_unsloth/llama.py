@@ -25,7 +25,9 @@ def LlamaModel_fast_forward(
 
     # retrieve input_ids and inputs_embeds
     if input_ids is not None and inputs_embeds is not None:
-        raise ValueError("Unsloth: You cannot specify both decoder_input_ids and decoder_inputs_embeds at the same time")
+        thinking_embeds = inputs_embeds
+        batch_size, seq_length, _ = inputs_embeds.shape
+        # raise ValueError("Unsloth: You cannot specify both decoder_input_ids and decoder_inputs_embeds at the same time")
     elif input_ids is not None:
         batch_size, seq_length = input_ids.shape
     elif inputs_embeds is not None:
@@ -77,8 +79,16 @@ def LlamaModel_fast_forward(
     pass
 
     # Embed positions
-    if inputs_embeds is None:
+    if input_ids is not None:
         inputs_embeds = self.embed_tokens(input_ids)
+
+    thinking_mask = kwargs.get('thinking_mask')
+    if thinking_mask is not None:
+        new_inputs_embeds = inputs_embeds.clone()
+        new_inputs_embeds[thinking_mask] = self.thinking_residual(
+            inputs_embeds[thinking_mask], thinking_embeds[thinking_mask],
+        )[0].to(inputs_embeds.dtype)
+        inputs_embeds = new_inputs_embeds
 
     inputs_embeds = inputs_embeds.to(_get_dtype(dtype_from_config(self.config)))
 
@@ -335,3 +345,107 @@ def LlamaModel_fast_forward(
         attentions=all_self_attns,
     )
 pass
+
+# https://github.com/huggingface/transformers/blob/main/src/transformers/models/llama/modeling_llama.py#L825
+def _LlamaModel_fast_forward_inference(attention_fast_forward_inference=LlamaAttention_fast_forward_inference, mlp_fast_forward_inference=fast_swiglu_inference):
+    # This makes the attention and MLP customisable.
+    # Now for models like qwen3 or cohere which use custom attention operations, we can use this function
+    def LlamaModel_fast_forward_inference_custom(
+        self,
+        input_ids,
+        past_key_values,
+        position_ids,
+        attention_mask = None,
+    ):
+        input_ids = input_ids[:,:self.max_seq_length]
+        bsz, q_len = input_ids.shape
+        hd = self.config.hidden_size
+        mlp_size = self.config.intermediate_size
+
+        X = self.model.embed_tokens(input_ids)
+        X = X.to(_get_dtype(dtype_from_config(self.config)))
+        bsz, q_len, hd = X.shape
+        assert(q_len == 1)
+        # Get saved buffers to reduce memory movement
+        residual = torch.empty((bsz, q_len, hd), dtype = torch.float32, device = f"{DEVICE_TYPE}:0")
+        _XX = torch.empty((2, bsz, q_len, hd), dtype = torch.float32, device = f"{DEVICE_TYPE}:0")
+        XX, XX2 = _XX[0], _XX[1]
+        variance = torch.empty((bsz, q_len, 1), dtype = torch.float32, device = f"{DEVICE_TYPE}:0")
+        temp_mlp = torch.empty((2, bsz, 1, mlp_size), dtype = X.dtype, device = f"{DEVICE_TYPE}:0")
+        temp_gates, temp_ups = tuple(temp_mlp[0].to(torch.device(x)) for x in range(DEVICE_COUNT)), tuple(temp_mlp[1].to(torch.device(x)) for x in range(DEVICE_COUNT))
+
+        seq_len = past_key_values[0][0].shape[-2]
+        if bsz != 1:
+            attention_mask = _prepare_4d_causal_attention_mask_for_sdpa(
+                attention_mask,
+                (bsz, q_len),
+                X,
+                seq_len,
+                sliding_window = getattr(self.config, "sliding_window", None),
+            )
+        else:
+            attention_mask = None
+        pass
+
+        next_decoder_cache = []
+
+        for idx, decoder_layer in enumerate(self.model.layers):
+            device_index = getattr(decoder_layer, "_per_layer_device_index", 0)
+            X, residual, position_ids = move_to_device(
+                device_index, X, residual, position_ids
+            )
+            residual.copy_(X) # residual = X
+            X = fast_rms_layernorm_inference(
+                decoder_layer.input_layernorm,
+                X,
+                XX = XX,
+                XX2 = XX2,
+                variance = variance,
+            )
+            X, present_key_value = attention_fast_forward_inference(
+                decoder_layer.self_attn,
+                hidden_states = X,
+                past_key_value = past_key_values[idx],
+                position_ids = position_ids,
+                attention_mask = attention_mask,
+                do_prefill = not hasattr(decoder_layer.self_attn, "paged_attention"),
+            )
+            X += residual
+
+            residual.copy_(X) # residual = X
+            X = fast_rms_layernorm_inference(
+                decoder_layer.post_attention_layernorm,
+                X,
+                XX = XX,
+                XX2 = XX2,
+                variance = variance,
+            )
+            X = mlp_fast_forward_inference(
+                decoder_layer.mlp,
+                X,
+                temp_gate = temp_gates[device_index],
+                temp_up = temp_ups[device_index],
+            )
+            X += residual
+
+            next_decoder_cache.append(present_key_value)
+        pass
+        X = fast_rms_layernorm_inference(
+            self.model.norm,
+            X,
+            XX = XX,
+            XX2 = XX2,
+            variance = variance,
+        )
+
+        return BaseModelOutputWithPast(
+            last_hidden_state = X,
+            past_key_values = next_decoder_cache,
+            hidden_states = [],
+            attentions = [],
+        )
+    pass
+    return LlamaModel_fast_forward_inference_custom
+
+# For ensuring backwards compatibility, we create LlamaModel_fast_forward_inference that is consumed by other models
+LlamaModel_fast_forward_inference = _LlamaModel_fast_forward_inference()
