@@ -1,6 +1,9 @@
 import torch
 from torch import nn
-from transformers.models.llama.modeling_llama import LlamaConfig, LlamaModel
+from transformers.models.llama.modeling_llama import (
+    LlamaConfig,
+    LlamaModel,
+)
 
 
 class ThinkingResidualLambda(nn.Module):
