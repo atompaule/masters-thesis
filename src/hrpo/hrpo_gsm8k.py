@@ -6,10 +6,11 @@ import unsloth  # unsloth explicitly states it needs to be imported first
 from datasets import Dataset, load_dataset
 from patch import patch_trainer_optimizer
 from trl import GRPOConfig, GRPOTrainer
-from unsloth import FastLanguageModel, PatchFastRL, is_bfloat16_supported
+from unsloth import PatchFastRL, is_bfloat16_supported
+from src.hrpo.hrpo_unsloth.loader import HRPOFastLanguageModel
 from utils import ANSWER_START, get_reward_func, process_gsm8k, process_gsm8k_answer
 
-PatchFastRL("GRPO", FastLanguageModel)
+PatchFastRL("GRPO", HRPOFastLanguageModel)
 
 os.environ["WANDB_PROJECT"] = "masters-thesis"
 
@@ -29,7 +30,6 @@ def main(args):
     logger.info(
         f"Starting experiment {args.model_name} with group size {args.group_size}"
     )
-    print(f"Starting experiment {args.model_name} with group size {args.group_size}")
     exp_name = (
         f"./experiments/{args.model_name.split('/')[-1]}-gsm8k-group{args.group_size}"
         f"-lora{args.lora_rank}-rmin{args.residual_r_min}-temp{args.temperature}"
@@ -38,7 +38,7 @@ def main(args):
         print(f"Experiment {exp_name} already exists. Exiting...")
         exit()
 
-    model, tokenizer = FastLanguageModel.from_pretrained(
+    model, tokenizer = HRPOFastLanguageModel.from_pretrained(
         model_name=args.model_name,
         max_seq_length=args.max_prompt_length + args.max_completion_length,
         load_in_4bit=False,
@@ -50,7 +50,7 @@ def main(args):
     tokenizer.padding_side = "left"
     tokenizer.pad_token = tokenizer.eos_token
 
-    model = FastLanguageModel.get_peft_model(
+    model = HRPOFastLanguageModel.get_peft_model(
         model,
         r=args.lora_rank,
         target_modules=[
@@ -62,19 +62,19 @@ def main(args):
             "up_proj",
             "down_proj",
         ],
-        # modules_to_save=[
-        #     "thinking_residual_gate_r",
-        #     "thinking_residual_gate_i",
-        #     "thinking_residual_Lambda",
-        # ],
+        modules_to_save=[
+            "thinking_residual_gate_r",
+            "thinking_residual_gate_i",
+            "thinking_residual_Lambda",
+        ],
         lora_alpha=args.lora_rank * 2,
         use_gradient_checkpointing="unsloth",
         random_state=args.seed,
     )
-    # model.model.model.thinking_residual_Lambda.reset_lambda_parameters(
-    #     r_min=args.residual_r_min,
-    #     r_max=args.residual_r_max,
-    # )
+    model.model.model.thinking_residual_Lambda.reset_lambda_parameters(
+        r_min=args.residual_r_min,
+        r_max=args.residual_r_max,
+    )
 
     training_args = GRPOConfig(
         use_vllm=False,
