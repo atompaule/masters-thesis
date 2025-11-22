@@ -1,10 +1,19 @@
+import inspect
 import os
+from contextlib import nullcontext
 
 import numpy as np
+import torch
 from unsloth.models.rl_replacements import (
     RL_FUNCTIONS,
     RL_REPLACEMENTS,
     grpo_trainer_compute_loss,
+)
+from unsloth_zoo.rl_replacements import (
+    UnslothEfficientGRPO,
+    calculate_pad_tokens_in_prompt,
+    create_completion_attention_mask,
+    left_pack_padding,
 )
 
 
@@ -89,11 +98,15 @@ def grpo_accumulated_loss(
         )
     with autocaster:
         if pixel_values is None:
-            raise NotImplementedError(
-                "ERROR: HRPO not implemented for pixel_values is None"
-            )
+            if thinking_embeds is not None:
+                thinking_embeds = thinking_embeds.clone()
+            if thinking_mask is not None:
+                thinking_mask = thinking_mask.clone()
+
             new_hidden_states = unwrapped_model(
                 input_ids=input_ids,
+                inputs_embeds=thinking_embeds,
+                thinking_mask=thinking_mask,
                 attention_mask=attention_mask,
                 pixel_values=pixel_values,
                 image_grid_thw=image_grid_thw,
@@ -115,22 +128,9 @@ def grpo_accumulated_loss(
                     :, -(logits_to_keep + max_left_pad + 1) :, :
                 ]
         else:
-            if thinking_embeds is not None:
-                thinking_embeds = thinking_embeds.clone()
-            if thinking_mask is not None:
-                thinking_mask = thinking_mask.clone()
-
-            new_hidden_states = unwrapped_model(
-                input_ids=input_ids,
-                inputs_embeds=thinking_embeds,
-                thinking_mask=thinking_mask,
-                attention_mask=attention_mask,
-                pixel_values=pixel_values,
-                image_grid_thw=image_grid_thw,
-                pixel_attention_mask=pixel_attention_mask,
-                image_sizes=image_sizes,
-                logits_to_keep=logits_to_keep + 1,
-            ).logits
+            raise NotImplementedError(
+                "ERROR: HRPO not implemented for pixel_values is not None"
+            )
 
     loss, completion_length, mean_kl = UnslothEfficientGRPO.apply(
         new_hidden_states,
@@ -226,7 +226,9 @@ def _grpo_trainer_compute_loss(function_name, function):
                 logits_to_keep,
                 batch_size,
                 compute_entropy,
-                compute_efficient,
+                # compute_efficient,
+                thinking_embeds=thinking_embeds,
+                thinking_mask=thinking_mask,
             )[0]
         )  # logps
         # breakpoint()
@@ -264,7 +266,9 @@ def _grpo_trainer_compute_loss(function_name, function):
             logit_scale_divide = 0
 
         if per_token_logps is not None:
-            raise NotImplementedError("ERROR: HRPO not implemented for compute_loss")
+            raise NotImplementedError(
+                "ERROR: HRPO not implemented for per_token_logps is not None"
+            )
 
             if ref_hidden_states is not None:
                 ref_hidden_states = ref_hidden_states[

@@ -5,7 +5,7 @@ from unsloth.models.llama import *
 from unsloth.models._utils import __version__, _prepare_model_for_qat
 from unsloth_zoo.utils import _get_dtype
 from peft import get_peft_model as _get_peft_model
-from src.hrpo.hrpo_transformers.modeling_llama import HRPOLLamaModel
+from src.hrpo.hrpo_transformers.modeling_llama import HRPOLlamaModel
 
 
 # https://github.com/huggingface/transformers/blob/main/src/transformers/models/llama/modeling_llama.py#L825
@@ -491,7 +491,7 @@ class HRPOFastLlamaModel(FastLlamaModel):
         LlamaSdpaAttention  .forward = LlamaAttention_fast_forward
         LlamaFlashAttention2.forward = LlamaAttention_fast_forward
         LlamaDecoderLayer   .forward = LlamaDecoderLayer_fast_forward
-        HRPOLLamaModel      .forward = LlamaModel_fast_forward
+        HRPOLlamaModel      .forward = LlamaModel_fast_forward
         LlamaForCausalLM    .forward = CausalLM_fast_forward(LlamaModel_fast_forward_inference)
         PeftModelForCausalLM.forward = PeftModel_fast_forward
         fix_prepare_inputs_for_generation(LlamaForCausalLM)

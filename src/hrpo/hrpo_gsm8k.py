@@ -4,11 +4,19 @@ import os
 
 import unsloth  # unsloth explicitly states it needs to be imported first
 from datasets import Dataset, load_dataset
-from patch import patch_trainer_optimizer
-from trl import GRPOConfig, GRPOTrainer
+from trl import GRPOConfig
 from unsloth import PatchFastRL, is_bfloat16_supported
+
+import src.hrpo.hrpo_unsloth.rl_replacements
+from src.hrpo.hrpo_trl.grpo_trainer import HRPOTrainer
 from src.hrpo.hrpo_unsloth.loader import HRPOFastLanguageModel
-from utils import ANSWER_START, get_reward_func, process_gsm8k, process_gsm8k_answer
+from src.hrpo.patch import patch_trainer_optimizer
+from src.hrpo.utils import (
+    ANSWER_START,
+    get_reward_func,
+    process_gsm8k,
+    process_gsm8k_answer,
+)
 
 PatchFastRL("GRPO", HRPOFastLanguageModel)
 
@@ -104,7 +112,7 @@ def main(args):
     )
 
     dataset = preprocess_gsm8k("train", chunk_size=500)
-    trainer = GRPOTrainer(
+    trainer = HRPOTrainer(
         model=model,
         processing_class=tokenizer,
         reward_funcs=[
