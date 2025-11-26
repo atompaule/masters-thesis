@@ -5,9 +5,18 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "debugpy>=1.8.17",
-    "setuptools>=80.9.0",
-    "trl==0.23",
-    "unsloth>=2025.9.9",
+    "trl",
     "wandb>=0.23.0",
 ]
+
+[tool.uv.workspace]
+members = [
+    "src/external/trl",
+    "src/external/transformers",
+]
+
+[tool.uv.sources]
+trl = { workspace = true, editable = true }
+
+[tool.uv.extra-build-dependencies]
+natten = ["torch"]
