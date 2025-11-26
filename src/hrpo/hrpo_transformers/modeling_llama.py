@@ -3,8 +3,10 @@ from torch import nn
 from transformers.models.llama.modeling_llama import (
     LlamaConfig,
     LlamaModel,
+    LlamaForCausalLM,
 )
 
+from .utils import HRPOGenerationMixin
 
 class ThinkingResidualLambda(nn.Module):
     c = 8.0
@@ -42,3 +44,9 @@ class HRPOLlamaModel(LlamaModel):
         i_t = torch.sigmoid(self.thinking_residual_gate_i(embeds))
         a_t = self.thinking_residual_Lambda(r_t)
         return a_t * embeds + torch.sqrt(1 - a_t.pow(2) + eps) * (i_t * residual), a_t
+
+class HRPOLlamaForCausalLM(LlamaForCausalLM, HRPOGenerationMixin):
+    def __init__(self, config):
+        super().__init__(config)
+        self.model = HRPOLlamaModel(config)
+        self.post_init()

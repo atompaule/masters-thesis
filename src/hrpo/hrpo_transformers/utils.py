@@ -1,4 +1,5 @@
-from transformers.generation.utils import GenerationMixin
+from transformers.generation.utils import *
+
 
 class HRPOGenerationMixin(GenerationMixin):
     @torch.no_grad()
@@ -8,7 +9,9 @@ class HRPOGenerationMixin(GenerationMixin):
         generation_config: Optional[GenerationConfig] = None,
         logits_processor: Optional[LogitsProcessorList] = None,
         stopping_criteria: Optional[StoppingCriteriaList] = None,
-        prefix_allowed_tokens_fn: Optional[Callable[[int, torch.Tensor], list[int]]] = None,
+        prefix_allowed_tokens_fn: Optional[
+            Callable[[int, torch.Tensor], list[int]]
+        ] = None,
         synced_gpus: Optional[bool] = None,
         assistant_model: Optional["PreTrainedModel"] = None,
         streamer: Optional["BaseStreamer"] = None,
@@ -130,7 +133,11 @@ class HRPOGenerationMixin(GenerationMixin):
                 "trust_remote_code",
                 "custom_generate",
             }
-            generate_arguments = {key: value for key, value in locals().items() if key not in global_keys_to_exclude}
+            generate_arguments = {
+                key: value
+                for key, value in locals().items()
+                if key not in global_keys_to_exclude
+            }
             generate_arguments.update(kwargs)
 
             custom_generate_function = self.load_custom_generate(
@@ -139,8 +146,12 @@ class HRPOGenerationMixin(GenerationMixin):
             return custom_generate_function(model=self, **generate_arguments)
 
         # 1. Handle `generation_config` and kwargs that might update it, and validate the `.generate()` call
-        tokenizer = kwargs.pop("tokenizer", None)  # Pull this out first, we only use it for stopping criteria
-        assistant_tokenizer = kwargs.pop("assistant_tokenizer", None)  # only used for assisted generation
+        tokenizer = kwargs.pop(
+            "tokenizer", None
+        )  # Pull this out first, we only use it for stopping criteria
+        assistant_tokenizer = kwargs.pop(
+            "assistant_tokenizer", None
+        )  # only used for assisted generation
 
         generation_config, model_kwargs = self._prepare_generation_config(
             generation_config, use_model_defaults, **kwargs
@@ -150,12 +161,22 @@ class HRPOGenerationMixin(GenerationMixin):
 
         # 2. Set generation parameters if not already defined
         if synced_gpus is None:
-            synced_gpus = (is_deepspeed_zero3_enabled() or is_fsdp_managed_module(self)) and dist.get_world_size() > 1
+            synced_gpus = (
+                is_deepspeed_zero3_enabled() or is_fsdp_managed_module(self)
+            ) and dist.get_world_size() > 1
 
-        logits_processor = logits_processor if logits_processor is not None else LogitsProcessorList()
-        stopping_criteria = stopping_criteria if stopping_criteria is not None else StoppingCriteriaList()
+        logits_processor = (
+            logits_processor if logits_processor is not None else LogitsProcessorList()
+        )
+        stopping_criteria = (
+            stopping_criteria
+            if stopping_criteria is not None
+            else StoppingCriteriaList()
+        )
 
-        accepts_attention_mask = "attention_mask" in set(inspect.signature(self.forward).parameters.keys())
+        accepts_attention_mask = "attention_mask" in set(
+            inspect.signature(self.forward).parameters.keys()
+        )
         requires_attention_mask = "encoder_outputs" not in model_kwargs
         kwargs_has_attention_mask = model_kwargs.get("attention_mask", None) is not None
 
@@ -166,7 +187,9 @@ class HRPOGenerationMixin(GenerationMixin):
         batch_size = inputs_tensor.shape[0]
 
         device = inputs_tensor.device
-        self._prepare_special_tokens(generation_config, kwargs_has_attention_mask, device=device)
+        self._prepare_special_tokens(
+            generation_config, kwargs_has_attention_mask, device=device
+        )
 
         # decoder-only models must use left-padding for batched generation.
         if not self.config.is_encoder_decoder:
@@ -176,7 +199,10 @@ class HRPOGenerationMixin(GenerationMixin):
                 generation_config._pad_token_tensor is not None
                 and batch_size > 1
                 and len(inputs_tensor.shape) == 2
-                and torch.sum(inputs_tensor[:, -1] == generation_config._pad_token_tensor) > 0
+                and torch.sum(
+                    inputs_tensor[:, -1] == generation_config._pad_token_tensor
+                )
+                > 0
             ):
                 logger.warning(
                     "A decoder-only architecture is being used, but right-padding was detected! For correct "
@@ -189,13 +215,22 @@ class HRPOGenerationMixin(GenerationMixin):
         if not self.config.is_encoder_decoder and model_input_name == "inputs_embeds":
             generation_config.use_cache = True
 
-        if not kwargs_has_attention_mask and requires_attention_mask and accepts_attention_mask:
-            model_kwargs["attention_mask"] = self._prepare_attention_mask_for_generation(
-                inputs_tensor, generation_config, model_kwargs
+        if (
+            not kwargs_has_attention_mask
+            and requires_attention_mask
+            and accepts_attention_mask
+        ):
+            model_kwargs["attention_mask"] = (
+                self._prepare_attention_mask_for_generation(
+                    inputs_tensor, generation_config, model_kwargs
+                )
             )
         elif kwargs_has_attention_mask:
             # TODO (joao): generalize this check with other types of inputs
-            if model_input_name == "input_ids" and len(model_kwargs["attention_mask"].shape) > 2:
+            if (
+                model_input_name == "input_ids"
+                and len(model_kwargs["attention_mask"].shape) > 2
+            ):
                 raise ValueError("`attention_mask` passed to `generate` must be 2D.")
 
         if self.config.is_encoder_decoder and "encoder_outputs" not in model_kwargs:
@@ -214,12 +249,18 @@ class HRPOGenerationMixin(GenerationMixin):
                 device=inputs_tensor.device,
             )
         else:
-            input_ids = inputs_tensor if model_input_name == "input_ids" else model_kwargs.pop("input_ids")
+            input_ids = (
+                inputs_tensor
+                if model_input_name == "input_ids"
+                else model_kwargs.pop("input_ids")
+            )
 
         # Expand inputs depending on the generation mode
         input_ids, model_kwargs = self._expand_inputs_for_generation(
             input_ids=input_ids,
-            expand_size=max(generation_config.num_beams, generation_config.num_return_sequences),
+            expand_size=max(
+                generation_config.num_beams, generation_config.num_return_sequences
+            ),
             is_encoder_decoder=self.config.is_encoder_decoder,
             **model_kwargs,
         )
@@ -232,8 +273,14 @@ class HRPOGenerationMixin(GenerationMixin):
 
         # 6. Prepare `max_length` depending on other stopping criteria.
         input_ids_length = input_ids.shape[1]
-        has_default_max_length = kwargs.get("max_length") is None and generation_config.max_length is not None
-        has_default_min_length = kwargs.get("min_length") is None and generation_config.min_length is not None
+        has_default_max_length = (
+            kwargs.get("max_length") is None
+            and generation_config.max_length is not None
+        )
+        has_default_min_length = (
+            kwargs.get("min_length") is None
+            and generation_config.min_length is not None
+        )
         generation_config = self._prepare_generated_length(
             generation_config=generation_config,
             has_default_max_length=has_default_max_length,
@@ -249,7 +296,9 @@ class HRPOGenerationMixin(GenerationMixin):
         if self._supports_logits_to_keep() and "logits_to_keep" not in model_kwargs:
             model_kwargs["logits_to_keep"] = 1
 
-        self._validate_generated_length(generation_config, input_ids_length, has_default_max_length)
+        self._validate_generated_length(
+            generation_config, input_ids_length, has_default_max_length
+        )
 
         # 7. Prepare the cache.
         # - `model_kwargs` may be updated in place with a cache as defined by the parameters in `generation_config`.
@@ -263,7 +312,11 @@ class HRPOGenerationMixin(GenerationMixin):
         ):
             max_cache_length += inputs_tensor.shape[1]
         self._prepare_cache_for_generation(
-            generation_config, model_kwargs, assistant_model, batch_size, max_cache_length
+            generation_config,
+            model_kwargs,
+            assistant_model,
+            batch_size,
+            max_cache_length,
         )
 
         # 8. determine generation mode
@@ -298,109 +351,16 @@ class HRPOGenerationMixin(GenerationMixin):
             negative_prompt_attention_mask=negative_prompt_attention_mask,
         )
         prepared_stopping_criteria = self._get_stopping_criteria(
-            generation_config=generation_config, stopping_criteria=stopping_criteria, tokenizer=tokenizer, **kwargs
+            generation_config=generation_config,
+            stopping_criteria=stopping_criteria,
+            tokenizer=tokenizer,
+            **kwargs,
         )
 
         # Set model_kwargs `use_cache` so we can use it later in forward runs
         model_kwargs["use_cache"] = generation_config.use_cache
 
-        # 10. go into different generation modes
-        if isinstance(custom_generate, Callable):
-            result = custom_generate(
-                self,
-                input_ids,
-                logits_processor=prepared_logits_processor,
-                stopping_criteria=prepared_stopping_criteria,
-                generation_config=generation_config,
-                synced_gpus=synced_gpus,
-                streamer=streamer,
-                **model_kwargs,
-            )
-        elif generation_mode == GenerationMode.ASSISTED_GENERATION:
-            if generation_config.num_return_sequences > 1:
-                raise ValueError(
-                    "num_return_sequences has to be 1 when doing assisted generate, "
-                    f"but is {generation_config.num_return_sequences}."
-                )
-            if batch_size > 1:
-                raise ValueError("assisted generate is only supported for batch_size = 1")
-            if not model_kwargs["use_cache"]:
-                raise ValueError("assisted generate requires `use_cache=True`")
-            if generation_config.cache_implementation in ["static", "hybrid", "sliding_window"]:
-                raise ValueError("assisted generate is not supported with Static cache classes`")
-            if self._is_stateful:
-                # In assisted generation we need the ability to confirm whether the model would pick certain tokens,
-                # which is not possible with stateful models (they can't reset to a previous subset of generated text)
-                raise ValueError(
-                    f"assisted generation is not supported with stateful models, such as {self.__class__.__name__}"
-                )
-
-            # 11. Get the candidate generator, given the parameterization
-            candidate_generator = self._get_candidate_generator(
-                generation_config=generation_config,
-                input_ids=input_ids,
-                inputs_tensor=inputs_tensor,
-                assistant_model=assistant_model,
-                logits_processor=logits_processor,
-                target_tokenizer=tokenizer,
-                assistant_tokenizer=assistant_tokenizer,
-                model_kwargs=model_kwargs,
-            )
-
-            # 12. run assisted generate
-            result = self._assisted_decoding(
-                input_ids,
-                candidate_generator=candidate_generator,
-                logits_processor=prepared_logits_processor,
-                stopping_criteria=prepared_stopping_criteria,
-                generation_config=generation_config,
-                synced_gpus=synced_gpus,
-                streamer=streamer,
-                **model_kwargs,
-            )
-        # TODO joao, manuel: remove this in v4.62.0
-        elif generation_mode == GenerationMode.DOLA_GENERATION:
-            logger.warning_once(
-                "DoLa generation was moved to a `custom_generate` repo: https://hf.co/transformers-community/dola. "
-                "To prevent loss of backward compatibility, add `custom_generate='transformers-community/dola'` "
-                "to your `generate` call before v4.62.0."
-            )
-            if not trust_remote_code:
-                raise ValueError(
-                    "DoLa generation requires `trust_remote_code=True` in your `generate` call, since "
-                    "it loads https://hf.co/transformers-community/dola."
-                )
-            return GenerationMixin.generate(
-                self,
-                inputs,
-                custom_generate="transformers-community/dola",
-                generation_config=generation_config,
-                trust_remote_code=trust_remote_code,
-                **kwargs,
-            )
-        # TODO joao, manuel: remove this in v4.62.0
-        elif generation_mode == GenerationMode.CONTRASTIVE_SEARCH:
-            logger.warning_once(
-                "Contrastive search was moved to a `custom_generate` repo: https://hf.co/transformers-community/contrastive-search. "
-                "To prevent loss of backward compatibility, add `custom_generate='transformers-community/contrastive-search'` "
-                "to your `generate` call before v4.62.0."
-            )
-            if not trust_remote_code:
-                logger.warning_once(
-                    "Contrastive search requires `trust_remote_code=True` in your `generate` call, since "
-                    "it loads https://hf.co/transformers-community/contrastive-search."
-                )
-            # Avoid calling the model-defined `generate` method, since some models (e.g. Janus, Whisper) override it.
-            return GenerationMixin.generate(
-                self,
-                inputs,
-                custom_generate="transformers-community/contrastive-search",
-                generation_config=generation_config,
-                trust_remote_code=trust_remote_code,
-                **kwargs,
-            )
-
-        elif generation_mode in (GenerationMode.SAMPLE, GenerationMode.GREEDY_SEARCH):
+        if generation_mode in (GenerationMode.SAMPLE, GenerationMode.GREEDY_SEARCH):
             # 11. run sample (it degenerates to greedy search when `generation_config.do_sample=False`)
             result = self._sample(
                 input_ids,
@@ -409,110 +369,8 @@ class HRPOGenerationMixin(GenerationMixin):
                 generation_config=generation_config,
                 synced_gpus=synced_gpus,
                 streamer=streamer,
-                **model_kwargs,
-            )
-
-        elif generation_mode in (GenerationMode.BEAM_SAMPLE, GenerationMode.BEAM_SEARCH):
-            # 11. run beam sample
-            result = self._beam_search(
-                input_ids,
-                logits_processor=prepared_logits_processor,
-                stopping_criteria=prepared_stopping_criteria,
-                generation_config=generation_config,
-                synced_gpus=synced_gpus,
-                **model_kwargs,
-            )
-
-        elif generation_mode == GenerationMode.GROUP_BEAM_SEARCH:
-            logger.warning_once(
-                "Group Beam Search is scheduled to be moved to a `custom_generate` repository in v4.55.0. "
-                "To prevent loss of backward compatibility, add `trust_remote_code=True` to your `generate` call."
-            )
-            # 11. prepare beam search scorer
-            beam_scorer = BeamSearchScorer(
-                batch_size=batch_size,
-                num_beams=generation_config.num_beams,
-                device=inputs_tensor.device,
-                length_penalty=generation_config.length_penalty,
-                do_early_stopping=generation_config.early_stopping,
-                num_beam_hyps_to_keep=generation_config.num_return_sequences,
-                num_beam_groups=generation_config.num_beam_groups,
-                max_length=generation_config.max_length,
-            )
-            result = self._group_beam_search(
-                input_ids,
-                beam_scorer,
-                logits_processor=prepared_logits_processor,
-                stopping_criteria=prepared_stopping_criteria,
-                generation_config=generation_config,
-                synced_gpus=synced_gpus,
-                **model_kwargs,
-            )
-
-        elif generation_mode == GenerationMode.CONSTRAINED_BEAM_SEARCH:
-            logger.warning_once(
-                "Constrained Beam Search is scheduled to be moved to a `custom_generate` repository in v4.55.0. "
-                "To prevent loss of backward compatibility, add `trust_remote_code=True` to your `generate` call."
-            )
-            final_constraints = []
-            if generation_config.constraints is not None:
-                final_constraints = generation_config.constraints
-
-            if generation_config.force_words_ids is not None:
-
-                def typeerror():
-                    raise ValueError(
-                        "`force_words_ids` has to either be a `list[list[list[int]]]` or `list[list[int]]` "
-                        f"of positive integers, but is {generation_config.force_words_ids}."
-                    )
-
-                if (
-                    not isinstance(generation_config.force_words_ids, list)
-                    or len(generation_config.force_words_ids) == 0
-                ):
-                    typeerror()
-
-                for word_ids in generation_config.force_words_ids:
-                    if isinstance(word_ids[0], list):
-                        if not isinstance(word_ids, list) or len(word_ids) == 0:
-                            typeerror()
-                        if any(not isinstance(token_ids, list) for token_ids in word_ids):
-                            typeerror()
-                        if any(
-                            any((not isinstance(token_id, int) or token_id < 0) for token_id in token_ids)
-                            for token_ids in word_ids
-                        ):
-                            typeerror()
-
-                        constraint = DisjunctiveConstraint(word_ids)
-                    else:
-                        if not isinstance(word_ids, list) or len(word_ids) == 0:
-                            typeerror()
-                        if any((not isinstance(token_id, int) or token_id < 0) for token_id in word_ids):
-                            typeerror()
-
-                        constraint = PhrasalConstraint(word_ids)
-                    final_constraints.append(constraint)
-
-            # 11. prepare beam search scorer
-            constrained_beam_scorer = ConstrainedBeamSearchScorer(
-                constraints=final_constraints,
-                batch_size=batch_size,
-                num_beams=generation_config.num_beams,
-                device=inputs_tensor.device,
-                length_penalty=generation_config.length_penalty,
-                do_early_stopping=generation_config.early_stopping,
-                num_beam_hyps_to_keep=generation_config.num_return_sequences,
-                max_length=generation_config.max_length,
-            )
-            # 12. run beam search
-            result = self._constrained_beam_search(
-                input_ids,
-                constrained_beam_scorer=constrained_beam_scorer,
-                logits_processor=prepared_logits_processor,
-                stopping_criteria=prepared_stopping_criteria,
-                generation_config=generation_config,
-                synced_gpus=synced_gpus,
+                processing_class=processing_class,
+                return_thinking_embeds=return_thinking_embeds,
                 **model_kwargs,
             )
 
@@ -576,38 +434,61 @@ class HRPOGenerationMixin(GenerationMixin):
         output_scores = generation_config.output_scores
         output_logits = generation_config.output_logits
         return_dict_in_generate = generation_config.return_dict_in_generate
-        has_eos_stopping_criteria = any(hasattr(criteria, "eos_token_id") for criteria in stopping_criteria)
+        has_eos_stopping_criteria = any(
+            hasattr(criteria, "eos_token_id") for criteria in stopping_criteria
+        )
         do_sample = generation_config.do_sample
 
         # init attention / hidden states / scores tuples
         scores = () if (return_dict_in_generate and output_scores) else None
         raw_logits = () if (return_dict_in_generate and output_logits) else None
-        decoder_attentions = () if (return_dict_in_generate and output_attentions) else None
-        cross_attentions = () if (return_dict_in_generate and output_attentions) else None
-        decoder_hidden_states = () if (return_dict_in_generate and output_hidden_states) else None
+        decoder_attentions = (
+            () if (return_dict_in_generate and output_attentions) else None
+        )
+        cross_attentions = (
+            () if (return_dict_in_generate and output_attentions) else None
+        )
+        decoder_hidden_states = (
+            () if (return_dict_in_generate and output_hidden_states) else None
+        )
 
         # if model is an encoder-decoder, retrieve encoder attention weights and hidden states
         if return_dict_in_generate and self.config.is_encoder_decoder:
-            encoder_attentions = model_kwargs["encoder_outputs"].get("attentions") if output_attentions else None
+            encoder_attentions = (
+                model_kwargs["encoder_outputs"].get("attentions")
+                if output_attentions
+                else None
+            )
             encoder_hidden_states = (
-                model_kwargs["encoder_outputs"].get("hidden_states") if output_hidden_states else None
+                model_kwargs["encoder_outputs"].get("hidden_states")
+                if output_hidden_states
+                else None
             )
 
         # keep track of which sequences are already finished
         input_len = input_ids.shape[1]
         batch_size, cur_len = input_ids.shape[:2]
         this_peer_finished = False
-        unfinished_sequences = torch.ones(batch_size, dtype=torch.long, device=input_ids.device)
-        model_kwargs = self._get_initial_cache_position(cur_len, input_ids.device, model_kwargs)
+        unfinished_sequences = torch.ones(
+            batch_size, dtype=torch.long, device=input_ids.device
+        )
+        model_kwargs = self._get_initial_cache_position(
+            cur_len, input_ids.device, model_kwargs
+        )
 
         model_forward = self.__call__
-        compile_forward = self._valid_auto_compile_criteria(model_kwargs, generation_config)
+        compile_forward = self._valid_auto_compile_criteria(
+            model_kwargs, generation_config
+        )
         if compile_forward:
             os.environ["TOKENIZERS_PARALLELISM"] = "0"
             # If we use FA2 and a static cache, we cannot compile with fullgraph
             if self.config._attn_implementation == "flash_attention_2":
                 # only raise warning if the user passed an explicit compile-config
-                if generation_config.compile_config is not None and generation_config.compile_config.fullgraph:
+                if (
+                    generation_config.compile_config is not None
+                    and generation_config.compile_config.fullgraph
+                ):
                     logger.warning_once(
                         "When using Flash Attention 2 and a static cache, you cannot use the option `CompileConfig(fullgraph=True)` as "
                         "FA2 introduces graph breaks. We overrode the option with `fullgraph=False`."
@@ -616,30 +497,52 @@ class HRPOGenerationMixin(GenerationMixin):
             model_forward = self.get_compiled_call(generation_config.compile_config)
 
         if generation_config.prefill_chunk_size is not None:
-            model_kwargs = self._prefill_chunking(input_ids, generation_config, **model_kwargs)
+            model_kwargs = self._prefill_chunking(
+                input_ids, generation_config, **model_kwargs
+            )
             is_prefill = False
         else:
             is_prefill = True
 
         is_thinking, last_thinking_states = None, None
-        thinking_embeds = [self.get_input_embeddings()(input_ids)] if return_thinking_embeds else []
-        thinking_mask = [
-            torch.zeros_like(input_ids, dtype=torch.bool, device=input_ids.device)
-        ] if return_thinking_embeds else []
-        embeds_ratio = [
-            torch.ones_like(input_ids, dtype=torch.float32, device=input_ids.device)
-        ] if return_thinking_embeds else []
-        while self._has_unfinished_sequences(this_peer_finished, synced_gpus, device=input_ids.device):
+        thinking_embeds = (
+            [self.get_input_embeddings()(input_ids)] if return_thinking_embeds else []
+        )
+        thinking_mask = (
+            [torch.zeros_like(input_ids, dtype=torch.bool, device=input_ids.device)]
+            if return_thinking_embeds
+            else []
+        )
+        embeds_ratio = (
+            [torch.ones_like(input_ids, dtype=torch.float32, device=input_ids.device)]
+            if return_thinking_embeds
+            else []
+        )
+        while self._has_unfinished_sequences(
+            this_peer_finished, synced_gpus, device=input_ids.device
+        ):
             # prepare model inputs
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
 
             # prepare variable output controls (note: some models won't accept all output controls)
-            model_inputs.update({"output_attentions": output_attentions} if output_attentions else {})
-            model_inputs.update({"output_hidden_states": output_hidden_states} if output_hidden_states else {})
+            model_inputs.update(
+                {"output_attentions": output_attentions} if output_attentions else {}
+            )
+            model_inputs.update(
+                {"output_hidden_states": output_hidden_states}
+                if output_hidden_states
+                else {}
+            )
 
             # prepare is_thinking and last_thinking_states for latent reasoning
-            model_inputs.update({"is_thinking": is_thinking} if is_thinking is not None else {})
-            model_inputs.update({"last_thinking_states": last_thinking_states} if last_thinking_states is not None else {})
+            model_inputs.update(
+                {"is_thinking": is_thinking} if is_thinking is not None else {}
+            )
+            model_inputs.update(
+                {"last_thinking_states": last_thinking_states}
+                if last_thinking_states is not None
+                else {}
+            )
 
             if is_prefill:
                 outputs = self(**model_inputs, return_dict=True)
@@ -658,7 +561,9 @@ class HRPOGenerationMixin(GenerationMixin):
 
             # Copy is needed to avoid keeping a hanging ref to outputs.logits which may be very large for first iteration
             # (the clone itself is always small)
-            next_token_logits = outputs.logits[:, -1, :].to(copy=True, dtype=torch.float32, device=input_ids.device)
+            next_token_logits = outputs.logits[:, -1, :].to(
+                copy=True, dtype=torch.float32, device=input_ids.device
+            )
 
             # pre-process distribution
             next_token_scores = logits_processor(input_ids, next_token_logits)
@@ -671,7 +576,9 @@ class HRPOGenerationMixin(GenerationMixin):
                     raw_logits += (next_token_logits,)
                 if output_attentions:
                     decoder_attentions += (
-                        (outputs.decoder_attentions,) if self.config.is_encoder_decoder else (outputs.attentions,)
+                        (outputs.decoder_attentions,)
+                        if self.config.is_encoder_decoder
+                        else (outputs.attentions,)
                     )
                     if self.config.is_encoder_decoder:
                         cross_attentions += (outputs.cross_attentions,)
@@ -693,7 +600,9 @@ class HRPOGenerationMixin(GenerationMixin):
 
             # finished sentences should have their next token be a padding token
             if has_eos_stopping_criteria:
-                next_tokens = next_tokens * unfinished_sequences + pad_token_id * (1 - unfinished_sequences)
+                next_tokens = next_tokens * unfinished_sequences + pad_token_id * (
+                    1 - unfinished_sequences
+                )
 
             # update generated ids, model inputs, and length for next step
             input_ids = torch.cat([input_ids, next_tokens[:, None]], dim=-1)
@@ -703,20 +612,65 @@ class HRPOGenerationMixin(GenerationMixin):
             strs = processing_class.batch_decode(input_ids[:, input_len:])
             is_thinking = [self.answer_start not in s for s in strs]
             last_thinking_states = torch.einsum(
-                'bv,vd->bd', probs, self.get_input_embeddings().weight
+                "bv,vd->bd", probs, self.get_input_embeddings().weight
             )
-            last_thinking_states /= torch.sqrt((probs ** 2).sum(-1, keepdim=True)).to(last_thinking_states.dtype)
+            last_thinking_states /= torch.sqrt((probs**2).sum(-1, keepdim=True)).to(
+                last_thinking_states.dtype
+            )
 
-            if return_thinking_embeds and outputs.hidden_states is not None:
-                thinking_embeds.append(outputs.hidden_states[0].unsqueeze(1))
-                thinking_mask.append(
-                    torch.tensor(outputs.hidden_states[1], device=input_ids.device).unsqueeze(1)
-                )
-                embeds_ratio.append(
-                    torch.tensor(outputs.hidden_states[2], device=input_ids.device).unsqueeze(1)
-                )
+            if (
+                return_thinking_embeds
+                and outputs.hidden_states is not None
+                and len(outputs.hidden_states) > 0
+            ):
+                # The assumption is that HRPO models return extra hidden states
+                # standard HF models might return a tuple of hidden states for layers
+                # We need to make sure we are accessing what we expect.
+                # If it's a standard model, hidden_states is usually a tuple of (num_layers + 1) tensors
+                # If it is our HRPO model, it might be returning [thinking_embeds, thinking_mask, embeds_ratio]
 
-            unfinished_sequences = unfinished_sequences & ~stopping_criteria(input_ids, scores)
+                # Check if we have enough elements
+                if len(outputs.hidden_states) >= 3:
+                    thinking_embeds.append(outputs.hidden_states[0].unsqueeze(1))
+                    thinking_mask.append(
+                        torch.tensor(
+                            outputs.hidden_states[1], device=input_ids.device
+                        ).unsqueeze(1)
+                    )
+                    embeds_ratio.append(
+                        torch.tensor(
+                            outputs.hidden_states[2], device=input_ids.device
+                        ).unsqueeze(1)
+                    )
+                else:
+                    # Fallback: append placeholders to maintain sequence length alignment
+                    # This happens e.g. in the first step when is_thinking is None
+                    # thinking_embeds is (B, 1, D)
+                    dtype = self.get_input_embeddings().weight.dtype
+                    hidden_size = self.config.hidden_size
+                    thinking_embeds.append(
+                        torch.zeros(
+                            (batch_size, 1, hidden_size),
+                            device=input_ids.device,
+                            dtype=dtype,
+                        )
+                    )
+                    thinking_mask.append(
+                        torch.zeros(
+                            (batch_size, 1), device=input_ids.device, dtype=torch.bool
+                        )
+                    )
+                    embeds_ratio.append(
+                        torch.ones(
+                            (batch_size, 1),
+                            device=input_ids.device,
+                            dtype=torch.float32,
+                        )
+                    )
+
+            unfinished_sequences = unfinished_sequences & ~stopping_criteria(
+                input_ids, scores
+            )
             this_peer_finished = unfinished_sequences.max() == 0
             cur_len += 1
 
@@ -753,11 +707,20 @@ class HRPOGenerationMixin(GenerationMixin):
             if return_thinking_embeds:
                 thinking_embeds.append(self.get_input_embeddings()(input_ids[:, -1:]))
                 thinking_mask.append(
-                    torch.zeros_like(input_ids[:, -1:], dtype=torch.bool, device=input_ids.device)
+                    torch.zeros_like(
+                        input_ids[:, -1:], dtype=torch.bool, device=input_ids.device
+                    )
                 )
                 embeds_ratio.append(
-                    torch.ones_like(input_ids[:, -1:], dtype=torch.float32, device=input_ids.device)
+                    torch.ones_like(
+                        input_ids[:, -1:], dtype=torch.float32, device=input_ids.device
+                    )
                 )
-                return input_ids, torch.cat(thinking_embeds, dim=1), torch.cat(thinking_mask, dim=1), torch.cat(embeds_ratio, dim=1)
+                return (
+                    input_ids,
+                    torch.cat(thinking_embeds, dim=1),
+                    torch.cat(thinking_mask, dim=1),
+                    torch.cat(embeds_ratio, dim=1),
+                )
             else:
                 return input_ids

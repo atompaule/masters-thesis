@@ -1,8 +1,8 @@
 import torch
 from torch import nn
 from transformers.models.qwen2.configuration_qwen2 import Qwen2Config
-from transformers.models.qwen2.modeling_qwen2 import Qwen2Model
-
+from transformers.models.qwen2.modeling_qwen2 import Qwen2ForCausalLM, Qwen2Model
+from .utils import HRPOGenerationMixin
 
 class ThinkingResidualLambda(nn.Module):
     c = 8.0
@@ -25,6 +25,7 @@ class ThinkingResidualLambda(nn.Module):
 
 class HRPOQwen2Model(Qwen2Model):
     def __init__(self, config: Qwen2Config):
+        super().__init__(config)
         self.thinking_residual_gate_r = nn.Linear(
             config.hidden_size, config.hidden_size
         )
@@ -32,7 +33,7 @@ class HRPOQwen2Model(Qwen2Model):
             config.hidden_size, config.hidden_size
         )
         self.thinking_residual_Lambda = ThinkingResidualLambda(config)
-        super().__init__(config)
+        self.post_init()
 
     def thinking_residual(self, embeds, residual, eps=1e-8):
         """Computes the next input embedding as a function of the current discrete embedding and the residuals."""
@@ -40,3 +41,10 @@ class HRPOQwen2Model(Qwen2Model):
         i_t = torch.sigmoid(self.thinking_residual_gate_i(embeds))
         a_t = self.thinking_residual_Lambda(r_t)
         return a_t * embeds + torch.sqrt(1 - a_t.pow(2) + eps) * (i_t * residual), a_t
+
+
+class HRPOQwen2ForCausalLM(Qwen2ForCausalLM, HRPOGenerationMixin):
+    def __init__(self, config):
+        super().__init__(config)
+        self.model = HRPOQwen2Model(config)
+        self.post_init()

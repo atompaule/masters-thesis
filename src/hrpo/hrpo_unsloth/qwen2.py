@@ -1,5 +1,6 @@
 from src.hrpo.hrpo_transformers.modeling_qwen2 import (  # LlamaAttention,; LlamaDecoderLayer,; LlamaForCausalLM, <-- TODO: double check those
-    HRPOQwen2Model,
+    HRPOQwen2Model, 
+    HRPOQwen2ForCausalLM,
 )
 from src.hrpo.hrpo_unsloth.llama import LlamaModel_fast_forward, LlamaModel_fast_forward_inference, HRPOFastLlamaModel
 
@@ -44,7 +45,7 @@ class HRPOFastQwen2Model(HRPOFastLlamaModel):
         Qwen2FlashAttention2.forward = LlamaAttention_fast_forward
         Qwen2DecoderLayer   .forward = LlamaDecoderLayer_fast_forward
         HRPOQwen2Model      .forward = LlamaModel_fast_forward
-        Qwen2ForCausalLM    .forward = CausalLM_fast_forward(LlamaModel_fast_forward_inference)
+        HRPOQwen2ForCausalLM.forward = CausalLM_fast_forward(LlamaModel_fast_forward_inference)
         PeftModelForCausalLM.forward = PeftModel_fast_forward
         fix_prepare_inputs_for_generation(Qwen2ForCausalLM)
 
