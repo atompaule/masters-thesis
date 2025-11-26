@@ -1,0 +1,1 @@
+python -m debugpy --connect n-hpc-login1:5678 --wait-for-client src/hrpo/hrpo_gsm8k.py
