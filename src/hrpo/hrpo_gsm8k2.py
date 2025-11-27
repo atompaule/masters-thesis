@@ -1,19 +1,24 @@
 import argparse
 import logging
 import os
-from typing import Tuple
+import sys
+
+sys.path.insert(0, os.path.abspath("src/external/transformers/src"))
 
 from datasets import Dataset, load_dataset
 from peft import LoraConfig, TaskType, get_peft_model
 
-from src.external.transformers.models.auto import AutoTokenizer
 from src.external.transformers.src.transformers.models.llama.modeling_llama import (
     HRPOLlamaForCausalLM,
 )
 from src.external.transformers.src.transformers.models.qwen2.modeling_qwen2 import (
     HRPOQwen2ForCausalLM,
 )
-from src.external.trl.trl.trainer.grpo_trainer import GRPOConfig, GRPOTrainer
+from src.external.transformers.src.transformers.models.qwen2.tokenization_qwen2 import (
+    Qwen2Tokenizer,
+)
+from src.external.transformers.src.transformers.models.auto import AutoTokenizer
+from src.external.trl.trl.trainer.hrpo_trainer import GRPOConfig, HRPOTrainer
 from src.hrpo.patch import patch_trainer_optimizer
 from src.hrpo.utils import (
     ANSWER_START,
@@ -48,7 +53,8 @@ def main(args):
         print(f"Experiment {exp_name} already exists. Exiting...")
         exit()
 
-    tokenizer = AutoTokenizer.from_pretrained(args.model_name, use_fast=True)
+    # tokenizer = Qwen2Tokenizer.from_pretrained("Qwen/Qwen-tokenizer")
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name)
     tokenizer.padding_side = "left"
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
@@ -86,7 +92,7 @@ def main(args):
         ),
     )
 
-    model.model.thinking_residual_Lambda.reset_lambda_parameters(
+    model.model.model.thinking_residual_Lambda.reset_lambda_parameters(
         r_min=args.residual_r_min,
         r_max=args.residual_r_max,
     )
@@ -103,6 +109,7 @@ def main(args):
         optim=args.optimizer,
         max_grad_norm=args.max_grad_norm,
         logging_steps=1,
+        bf16=True,
         temperature=args.temperature,
         num_generations=args.group_size,
         gradient_accumulation_steps=args.gradient_accumulation_steps,
@@ -117,7 +124,7 @@ def main(args):
     )
 
     dataset = preprocess_gsm8k("train", chunk_size=500)
-    trainer = GRPOTrainer(
+    trainer = HRPOTrainer(
         model=model,
         processing_class=tokenizer,
         reward_funcs=[

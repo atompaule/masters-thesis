@@ -2,7 +2,9 @@ import torch
 from torch import nn
 from transformers.models.qwen2.configuration_qwen2 import Qwen2Config
 from transformers.models.qwen2.modeling_qwen2 import Qwen2ForCausalLM, Qwen2Model
+
 from .utils import HRPOGenerationMixin
+
 
 class ThinkingResidualLambda(nn.Module):
     c = 8.0

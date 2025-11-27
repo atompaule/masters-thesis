@@ -288,7 +288,7 @@ class HRPOTrainer(GRPOTrainer):
                     generation_config=self.generation_config,
                     disable_compile=True,
                     processing_class=self.processing_class,
-                    return_thinking_embeds=True,
+                    =True,return_thinking_embeds
                 )
             )
         # Compute prompt length and extract completion ids
