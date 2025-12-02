@@ -85,14 +85,14 @@ def main(args):
                 "down_proj",
             ],
             modules_to_save=[
-                "thinking_residual_gate_r",
-                "thinking_residual_gate_i",
-                "thinking_residual_Lambda",
+                "latent_gate_r",
+                "latent_gate_i",
+                "latent_gate_a",
             ],
         ),
     )
 
-    model.model.model.thinking_residual_Lambda.reset_lambda_parameters(
+    model.model.model.latent_gate_a.reset_lambda_parameters(
         r_min=args.residual_r_min,
         r_max=args.residual_r_max,
     )
