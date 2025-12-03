@@ -8,16 +8,10 @@ sys.path.insert(0, os.path.abspath("src/external/transformers/src"))
 from datasets import Dataset, load_dataset
 from peft import LoraConfig, TaskType, get_peft_model
 
-from src.external.transformers.src.transformers.models.llama.modeling_llama import (
-    HRPOLlamaForCausalLM,
-)
+from src.external.transformers.src.transformers.models.auto import AutoTokenizer
 from src.external.transformers.src.transformers.models.qwen2.modeling_qwen2 import (
     HRPOQwen2ForCausalLM,
 )
-from src.external.transformers.src.transformers.models.qwen2.tokenization_qwen2 import (
-    Qwen2Tokenizer,
-)
-from src.external.transformers.src.transformers.models.auto import AutoTokenizer
 from src.external.trl.trl.trainer.hrpo_trainer import GRPOConfig, HRPOTrainer
 from src.hrpo.patch import patch_trainer_optimizer
 from src.hrpo.utils import (
