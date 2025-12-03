@@ -14,9 +14,9 @@ from peft import LoraConfig, TaskType, get_peft_model
 
 from src.external.transformers.src.transformers.models.auto import AutoTokenizer
 from src.external.transformers.src.transformers.models.qwen2.modeling_qwen2 import (
-    HRPOQwen2ForCausalLM,
+    Qwen2ForCausalLM,
 )
-from src.external.trl.trl.trainer.hrpo_trainer import GRPOConfig, HRPOTrainer
+from src.external.trl.trl.trainer.grpo_trainer import GRPOConfig, GRPOTrainer
 from src.hrpo.patch import patch_trainer_optimizer
 from src.hrpo.utils import (
     ANSWER_START,
@@ -45,7 +45,7 @@ def main(args):
     )
     exp_name = (
         f"./experiments/{args.model_name.split('/')[-1]}-gsm8k-group{args.group_size}"
-        f"-lora{args.lora_rank}-rmin{args.residual_r_min}-temp{args.temperature}"
+        f"-lora{args.lora_rank}-rmin{args.residual_r_min}-temp{args.temperature}-grpo"
     )
     if os.path.exists(exp_name) and len(os.listdir(exp_name)) > 0:
         print(f"Experiment {exp_name} already exists. Exiting...")
@@ -58,7 +58,7 @@ def main(args):
         tokenizer.pad_token = tokenizer.eos_token
     tokenizer.model_max_length = args.max_prompt_length + args.max_completion_length
 
-    model = HRPOQwen2ForCausalLM.from_pretrained(
+    model = Qwen2ForCausalLM.from_pretrained(
         args.model_name,
         torch_dtype="auto",
         device_map="auto",
@@ -82,18 +82,18 @@ def main(args):
                 "up_proj",
                 "down_proj",
             ],
-            modules_to_save=[
-                "latent_gate_r",
-                "latent_gate_i",
-                "latent_gate_a",
-            ],
+            # modules_to_save=[
+            #     "latent_gate_r",
+            #     "latent_gate_i",
+            #     "latent_gate_a",
+            # ],
         ),
     )
 
-    model.model.model.latent_gate_a.reset_lambda_parameters(
-        r_min=args.residual_r_min,
-        r_max=args.residual_r_max,
-    )
+    # model.model.model.latent_gate_a.reset_lambda_parameters(
+    #     r_min=args.residual_r_min,
+    #     r_max=args.residual_r_max,
+    # )
 
     training_args = GRPOConfig(
         use_vllm=False,
@@ -134,7 +134,7 @@ def main(args):
             model.get_input_embeddings().register_forward_hook(make_inputs_require_grad)
 
     dataset = preprocess_gsm8k("train", chunk_size=500)
-    trainer = HRPOTrainer(
+    trainer = GRPOTrainer(
         model=model,
         processing_class=tokenizer,
         reward_funcs=[
@@ -143,11 +143,11 @@ def main(args):
         args=training_args,
         train_dataset=dataset,
     )
-    patch_trainer_optimizer(
-        trainer,
-        args.lr_residual_gate,
-        args.lr_residual_Lambda,
-    )
+    # patch_trainer_optimizer(
+    #     trainer,
+    #     args.lr_residual_gate,
+    #     args.lr_residual_Lambda,
+    # )
     trainer.train()
 
 
