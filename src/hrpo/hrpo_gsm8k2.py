@@ -8,6 +8,7 @@ project_root = os.path.dirname(
 )
 sys.path.insert(0, project_root)
 sys.path.insert(0, os.path.join(project_root, "src", "external", "transformers", "src"))
+sys.path.insert(0, os.path.join(project_root, "src", "external", "trl"))
 
 from datasets import Dataset, load_dataset
 from peft import LoraConfig, TaskType, get_peft_model
@@ -120,18 +121,6 @@ def main(args):
         report_to="wandb",
         output_dir=exp_name,
     )
-
-    # enable input gradients so gradient checkpointing works with LoRA
-    if training_args.gradient_checkpointing:
-        model.gradient_checkpointing_enable()
-        if hasattr(model, "enable_input_require_grads"):
-            model.enable_input_require_grads()
-        else:
-
-            def make_inputs_require_grad(module, input, output):
-                output.requires_grad_(True)
-
-            model.get_input_embeddings().register_forward_hook(make_inputs_require_grad)
 
     dataset = preprocess_gsm8k("train", chunk_size=500)
     trainer = HRPOTrainer(
