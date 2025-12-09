@@ -19,6 +19,7 @@ from src.external.transformers.src.transformers.models.auto import AutoTokenizer
 from src.external.transformers.src.transformers.models.qwen2.modeling_qwen2 import (
     HRPOQwen2ForCausalLM,
 )
+from src.hrpo.sanity_guards import check_adapter_sanity
 from src.hrpo.utils import (
     ANSWER_START,
     SYSTEM_PROMPT,
@@ -49,6 +50,7 @@ def evaluate_model(
 
     model = PeftModel.from_pretrained(model, adapter_path)
     print(f"Loaded adapter from {adapter_path}")
+    check_adapter_sanity(adapter_path)
     
     if hasattr(model.base_model.model.model, "latent_gate_a"):
         print("Latent gate parameters present in model.")

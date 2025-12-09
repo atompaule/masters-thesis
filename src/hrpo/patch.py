@@ -12,7 +12,7 @@ except ImportError:
 
 
 def patch_trainer_optimizer(
-    trainer, lr_thinking_residual_gate=1e-4, thinking_residual_Lambda=1e-3
+    trainer, lr_latent_gates=1e-4, lr_latent_gate_Lambda=1e-3
 ):
     def create_optimizer(self):
         """
@@ -31,7 +31,7 @@ def patch_trainer_optimizer(
                         p
                         for n, p in opt_model.named_parameters()
                         if (
-                            "thinking_residual" not in n
+                            "latent_gate" not in n
                             and n in decay_parameters
                             and p.requires_grad
                         )
@@ -44,7 +44,7 @@ def patch_trainer_optimizer(
                         p
                         for n, p in opt_model.named_parameters()
                         if (
-                            "thinking_residual" not in n
+                            "latent_gate" not in n
                             and n not in decay_parameters
                             and p.requires_grad
                         )
@@ -56,18 +56,21 @@ def patch_trainer_optimizer(
                     "params": [
                         p
                         for n, p in opt_model.named_parameters()
-                        if ("thinking_residual_gate" in n and p.requires_grad)
+                        if (
+                            ("latent_gate_r" in n or "latent_gate_i" in n)
+                            and p.requires_grad
+                        )
                     ],
-                    "lr": lr_thinking_residual_gate,
+                    "lr": lr_latent_gates,
                     "weight_decay": self.args.weight_decay,
                 },
                 {
                     "params": [
                         p
                         for n, p in opt_model.named_parameters()
-                        if ("thinking_residual_Lambda" in n and p.requires_grad)
+                        if ("latent_gate_a.Lambda" in n and p.requires_grad)
                     ],
-                    "lr": thinking_residual_Lambda,
+                    "lr": lr_latent_gate_Lambda,
                     "weight_decay": self.args.weight_decay,
                 },
             ]

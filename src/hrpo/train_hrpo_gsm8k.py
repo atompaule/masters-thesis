@@ -2,6 +2,9 @@ import argparse
 import logging
 import os
 import sys
+from datetime import datetime
+
+import torch
 
 project_root = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -17,8 +20,11 @@ from src.external.transformers.src.transformers.models.auto import AutoTokenizer
 from src.external.transformers.src.transformers.models.qwen2.modeling_qwen2 import (
     HRPOQwen2ForCausalLM,
 )
+from src.external.transformers.src.transformers.trainer_utils import set_seed
 from src.external.trl.trl.trainer.hrpo_trainer import GRPOConfig, HRPOTrainer
+from src.hrpo.callbacks import LambdaMonitoringCallback
 from src.hrpo.patch import patch_trainer_optimizer
+from src.hrpo.sanity_guards import check_trainable_status
 from src.hrpo.utils import (
     ANSWER_START,
     get_reward_func,
@@ -32,6 +38,8 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
 
+seed = 42
+
 
 def preprocess_gsm8k(split="train", chunk_size=1000) -> Dataset:
     dataset = load_dataset("openai/gsm8k", "main")[split]
@@ -44,9 +52,12 @@ def main(args):
     logger.info(
         f"Starting experiment {args.model_name} with group size {args.group_size}"
     )
+    if args.debug:
+        logger.info("Running in debug mode")
+    date_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     exp_name = (
         f"./experiments/{args.model_name.split('/')[-1]}-gsm8k-group{args.group_size}"
-        f"-lora{args.lora_rank}-rmin{args.residual_r_min}-temp{args.temperature}"
+        f"-lora{args.lora_rank}-rmin{args.residual_r_min}-temp{args.temperature}-{date_time}"
     )
     if os.path.exists(exp_name) and len(os.listdir(exp_name)) > 0:
         print(f"Experiment {exp_name} already exists. Exiting...")
@@ -91,10 +102,15 @@ def main(args):
         ),
     )
 
+    set_seed(seed)
     model.model.model.latent_gate_a.reset_lambda_parameters(
         r_min=args.residual_r_min,
         r_max=args.residual_r_max,
     )
+
+    model.print_trainable_parameters()
+
+    # check_trainable_status(model)
 
     training_args = GRPOConfig(
         use_vllm=False,
@@ -108,11 +124,14 @@ def main(args):
         optim=args.optimizer,
         max_grad_norm=args.max_grad_norm,
         logging_steps=1,
-        bf16=True,
         temperature=args.temperature,
         num_generations=args.group_size,
-        gradient_accumulation_steps=args.gradient_accumulation_steps,
-        per_device_train_batch_size=args.per_device_train_batch_size,
+        gradient_accumulation_steps=(
+            args.gradient_accumulation_steps if not args.debug else 2
+        ),
+        per_device_train_batch_size=(
+            args.per_device_train_batch_size if not args.debug else 2
+        ),
         max_prompt_length=args.max_prompt_length,
         max_completion_length=args.max_completion_length,
         num_train_epochs=1,
@@ -131,6 +150,7 @@ def main(args):
         ],
         args=training_args,
         train_dataset=dataset,
+        callbacks=[LambdaMonitoringCallback()],
     )
     patch_trainer_optimizer(
         trainer,
@@ -142,14 +162,18 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+
+    parser.add_argument("--debug", type=bool, default=False)
     parser.add_argument("--lora_rank", type=int, default=32)
 
     parser.add_argument("--lr", type=float, default=5e-6)
     parser.add_argument("--beta", type=float, default=0.005)
     parser.add_argument("--residual_r_min", type=float, default=0.99)
     parser.add_argument("--residual_r_max", type=float, default=0.999)
-    parser.add_argument("--lr_residual_gate", type=float, default=1e-4)
-    parser.add_argument("--lr_residual_Lambda", type=float, default=1e-3)
+    # parser.add_argument("--lr_residual_gate", type=float, default=1e-4)
+    # parser.add_argument("--lr_residual_Lambda", type=float, default=1e-3)
+    parser.add_argument("--lr_residual_gate", type=float, default=1)
+    parser.add_argument("--lr_residual_Lambda", type=float, default=1)
     parser.add_argument("--weight_decay", type=float, default=0.1)
     parser.add_argument("--warmup_ratio", type=float, default=0.1)
     parser.add_argument("--lr_scheduler_type", type=str, default="cosine")
@@ -164,7 +188,6 @@ if __name__ == "__main__":
     parser.add_argument("--max_completion_length", type=int, default=1024)
 
     parser.add_argument("--model_name", type=str, default="Qwen/Qwen2.5-1.5B-Instruct")
-    parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 
     # "Qwen/Qwen2.5-1.5B-Instruct"

@@ -18,7 +18,6 @@ from src.external.transformers.src.transformers.models.qwen2.modeling_qwen2 impo
     Qwen2ForCausalLM,
 )
 from src.external.trl.trl.trainer.grpo_trainer import GRPOConfig, GRPOTrainer
-from src.hrpo.patch import patch_trainer_optimizer
 from src.hrpo.utils import (
     ANSWER_START,
     get_reward_func,
@@ -108,7 +107,6 @@ def main(args):
         optim=args.optimizer,
         max_grad_norm=args.max_grad_norm,
         logging_steps=1,
-        bf16=True,
         temperature=args.temperature,
         num_generations=args.group_size,
         gradient_accumulation_steps=args.gradient_accumulation_steps,
@@ -164,7 +162,6 @@ if __name__ == "__main__":
     parser.add_argument("--max_completion_length", type=int, default=1024)
 
     parser.add_argument("--model_name", type=str, default="Qwen/Qwen2.5-1.5B-Instruct")
-    parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 
     # "Qwen/Qwen2.5-1.5B-Instruct"
