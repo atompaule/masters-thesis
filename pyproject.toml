@@ -8,6 +8,7 @@ dependencies = [
     "bitsandbytes>=0.48.2",
     "datasets>=4.4.1",
     "debugpy>=1.8.17",
+    "matplotlib>=3.10.7",
     "peft>=0.18.0",
     "wandb>=0.23.0",
 ]
