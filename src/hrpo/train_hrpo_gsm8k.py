@@ -22,7 +22,6 @@ from src.external.transformers.src.transformers.models.qwen2.modeling_qwen2 impo
 )
 from src.external.transformers.src.transformers.trainer_utils import set_seed
 from src.external.trl.trl.trainer.hrpo_trainer import GRPOConfig, HRPOTrainer
-from src.hrpo.callbacks import LambdaMonitoringCallback
 from src.hrpo.patch import patch_trainer_optimizer
 from src.hrpo.sanity_guards import check_trainable_status
 from src.hrpo.utils import (
@@ -54,6 +53,7 @@ def main(args):
     )
     if args.debug:
         logger.info("Running in debug mode")
+        # torch.autograd.set_detect_anomaly(True)
     date_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     exp_name = (
         f"./experiments/{args.model_name.split('/')[-1]}-gsm8k-group{args.group_size}"
@@ -108,14 +108,14 @@ def main(args):
         r_max=args.residual_r_max,
     )
 
-    model.print_trainable_parameters()
+    # model.print_trainable_parameters()
 
     # check_trainable_status(model)
 
     training_args = GRPOConfig(
         use_vllm=False,
         learning_rate=args.lr,
-        beta=args.beta,
+        beta=0.0, #args.beta TODO: fix weird latent gate params being nan in self.accelerator.unwrap_model(self.model).disable_adapter()
         adam_beta1=0.9,
         adam_beta2=0.99,
         weight_decay=args.weight_decay,
@@ -150,7 +150,6 @@ def main(args):
         ],
         args=training_args,
         train_dataset=dataset,
-        callbacks=[LambdaMonitoringCallback()],
     )
     patch_trainer_optimizer(
         trainer,
@@ -170,10 +169,8 @@ if __name__ == "__main__":
     parser.add_argument("--beta", type=float, default=0.005)
     parser.add_argument("--residual_r_min", type=float, default=0.99)
     parser.add_argument("--residual_r_max", type=float, default=0.999)
-    # parser.add_argument("--lr_residual_gate", type=float, default=1e-4)
-    # parser.add_argument("--lr_residual_Lambda", type=float, default=1e-3)
-    parser.add_argument("--lr_residual_gate", type=float, default=1)
-    parser.add_argument("--lr_residual_Lambda", type=float, default=1)
+    parser.add_argument("--lr_residual_gate", type=float, default=1e-4)
+    parser.add_argument("--lr_residual_Lambda", type=float, default=1e-3)
     parser.add_argument("--weight_decay", type=float, default=0.1)
     parser.add_argument("--warmup_ratio", type=float, default=0.1)
     parser.add_argument("--lr_scheduler_type", type=str, default="cosine")
