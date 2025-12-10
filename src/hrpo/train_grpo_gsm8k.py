@@ -98,7 +98,7 @@ def main(args):
     training_args = GRPOConfig(
         use_vllm=False,
         learning_rate=args.lr,
-        beta=args.beta,
+        beta=0.0,  # args.beta,
         adam_beta1=0.9,
         adam_beta2=0.99,
         weight_decay=args.weight_decay,
