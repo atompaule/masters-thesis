@@ -1,3 +1,8 @@
+"""
+Run this via:
+python -m debugpy --connect n-hpc-login1:5678 --wait-for-client src/hrpo/inspect_latent_gates.py "Qwen/Qwen2.5-1.5B-Instruct" "/work/utsch/masters-thesis/experiments/Qwen2.5-1.5B-Instruct-gsm8k-group4-lora32-rmin0.99-temp0.5-hrpo-2025-12-10_16-54-49/final_model"
+"""
+
 import os
 import sys
 
@@ -36,15 +41,31 @@ def inspect_latent_gates(model_path, adapter_path):
             r_min=0.99,
             r_max=0.999,
         )
-        lambda_param = model.model.latent_gate_a.Lambda
-        print(f"Lambda mean: {lambda_param.mean().item():.4f}")
-        print(f"Lambda std: {lambda_param.std().item():.4f}")
-        print(f"Lambda min: {lambda_param.min().item():.4f}")
-        print(f"Lambda max: {lambda_param.max().item():.4f}")
+        pre_lambda_param = model.model.latent_gate_a.Lambda
+        print(f"Lambda dtype: {pre_lambda_param.dtype}")
+        print(f"Lambda mean: {pre_lambda_param.mean().item():.6e}")
+        print(f"Lambda std: {pre_lambda_param.std().item():.6e}")
+        print(f"Lambda min: {pre_lambda_param.min().item():.6e}")
+        print(f"Lambda max: {pre_lambda_param.max().item():.6e}")
+
+        pre_gate_r_param = model.model.latent_gate_r.weight
+        print(f"Gate R weight dtype: {pre_gate_r_param.dtype}")
+        print(f"Gate R weight mean: {pre_gate_r_param.mean().item():.6e}")
+        print(f"Gate R weight std: {pre_gate_r_param.std().item():.6e}")
+        print(f"Gate R weight min: {pre_gate_r_param.min().item():.6e}")
+        print(f"Gate R weight max: {pre_gate_r_param.max().item():.6e}")
+
+        pre_gate_i_param = model.model.latent_gate_i.weight
+        print(f"Gate I weight dtype: {pre_gate_i_param.dtype}")
+        print(f"Gate I weight mean: {pre_gate_i_param.mean().item():.6e}")
+        print(f"Gate I weight std: {pre_gate_i_param.std().item():.6e}")
+        print(f"Gate I weight min: {pre_gate_i_param.min().item():.6e}")
+        print(f"Gate I weight max: {pre_gate_i_param.max().item():.6e}")
 
         # Store for comparison
-        pre_lambda = lambda_param.detach().cpu().clone()
-        pre_gate_r_weight = model.model.latent_gate_r.weight.detach().cpu().clone()
+        pre_lambda = pre_lambda_param.detach().cpu().clone()
+        pre_gate_r_weight = pre_gate_r_param.detach().cpu().clone()
+        pre_gate_i_weight = pre_gate_i_param.detach().cpu().clone()
 
     print(f"\nLoading adapter from {adapter_path}...")
     model = PeftModel.from_pretrained(model, adapter_path)
@@ -59,30 +80,40 @@ def inspect_latent_gates(model_path, adapter_path):
     # But usually PeftModel wraps the ForCausalLM.
 
     # Let's find where latent_gate_a is
-    if hasattr(model.base_model.model.model, "latent_gate_a"):
-        latent_gate_a = model.base_model.model.model.latent_gate_a
-        latent_gate_r = model.base_model.model.model.latent_gate_r
-    elif hasattr(model.base_model.model, "latent_gate_a"):
-        latent_gate_a = model.base_model.model.latent_gate_a
-        latent_gate_r = model.base_model.model.latent_gate_r
-    else:
-        print("Could not find latent_gate_a in expected location.")
-        print(model)
-        return
+    latent_gate_a = model.base_model.model.model.latent_gate_a
+    latent_gate_r = model.base_model.model.model.latent_gate_r
+    latent_gate_i = model.base_model.model.model.latent_gate_i
 
     lambda_param = latent_gate_a.Lambda
-    print(f"Lambda mean: {lambda_param.mean().item():.4f}")
-    print(f"Lambda std: {lambda_param.std().item():.4f}")
-    print(f"Lambda min: {lambda_param.min().item():.4f}")
-    print(f"Lambda max: {lambda_param.max().item():.4f}")
+    print(f"Lambda dtype: {lambda_param.dtype}")
+    print(f"Lambda mean: {lambda_param.mean().item():.6e}")
+    print(f"Lambda std: {lambda_param.std().item():.6e}")
+    print(f"Lambda min: {lambda_param.min().item():.6e}")
+    print(f"Lambda max: {lambda_param.max().item():.6e}")
+
+    gate_r_weight = latent_gate_r.weight
+    print(f"Gate R weight dtype: {gate_r_weight.dtype}")
+    print(f"Gate R weight mean: {gate_r_weight.mean().item():.6e}")
+    print(f"Gate R weight std: {gate_r_weight.std().item():.6e}")
+    print(f"Gate R weight min: {gate_r_weight.min().item():.6e}")
+    print(f"Gate R weight max: {gate_r_weight.max().item():.6e}")
+
+    gate_i_weight = latent_gate_i.weight
+    print(f"Gate I weight dtype: {gate_i_weight.dtype}")
+    print(f"Gate I weight mean: {gate_i_weight.mean().item():.6e}")
+    print(f"Gate I weight std: {gate_i_weight.std().item():.6e}")
+    print(f"Gate I weight min: {gate_i_weight.min().item():.6e}")
+    print(f"Gate I weight max: {gate_i_weight.max().item():.6e}")
 
     # Compare
-    vector_diff_lambda = (lambda_param.detach().cpu() - pre_lambda).abs()
-    diff_lambda = vector_diff_lambda.mean()
-    print(f"\nMean absolute difference in Lambda: {diff_lambda.item():.6f}")
+    diff_lambda = (lambda_param.detach().cpu() - pre_lambda).abs().mean()
+    print(f"\nMean absolute difference in Lambda: {diff_lambda.item():.6e}")
 
-    diff_gate_r = (latent_gate_r.weight.detach().cpu() - pre_gate_r_weight).abs().mean()
-    print(f"Mean absolute difference in Gate R weights: {diff_gate_r.item():.6f}")
+    diff_gate_r = (gate_r_weight.detach().cpu() - pre_gate_r_weight).abs().mean()
+    print(f"Mean absolute difference in Gate R weights: {diff_gate_r.item():.6e}")
+
+    diff_gate_i = (gate_i_weight.detach().cpu() - pre_gate_i_weight).abs().mean()
+    print(f"Mean absolute difference in Gate I weights: {diff_gate_i.item():.6e}")
 
     if diff_lambda.item() > 0 or diff_gate_r.item() > 0:
         print(
@@ -92,27 +123,6 @@ def inspect_latent_gates(model_path, adapter_path):
         print(
             "\nWARNING: Parameters appear unchanged. They might not have been loaded correctly or trained."
         )
-
-    # Visualize Lambda distribution
-    plt.figure(figsize=(10, 6))
-    plt.hist(
-        lambda_param.float().detach().cpu().numpy().flatten(),
-        bins=50,
-        alpha=0.7,
-        label="Trained Lambda",
-    )
-    plt.hist(
-        pre_lambda.float().numpy().flatten(),
-        bins=50,
-        alpha=0.5,
-        label="Random Init Lambda",
-    )
-    plt.title("Distribution of Lambda Parameter")
-    plt.xlabel("Value")
-    plt.ylabel("Count")
-    plt.legend()
-    plt.savefig("lambda_distribution.png")
-    print("\nSaved lambda distribution plot to lambda_distribution.png")
 
 
 if __name__ == "__main__":
