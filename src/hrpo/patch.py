@@ -11,9 +11,7 @@ except ImportError:
     smp = None
 
 
-def patch_trainer_optimizer(
-    trainer, lr_latent_gates=1e-4, lr_latent_gate_Lambda=1e-3
-):
+def patch_trainer_optimizer(trainer, lr_latent_gates=1e-4, lr_latent_gate_Lambda=1e-3):
     def create_optimizer(self):
         """
         Setup the optimizer.
@@ -21,6 +19,11 @@ def patch_trainer_optimizer(
         We provide a reasonable default that works well. If you want to use something else, you can pass a tuple in the
         Trainer's init through `optimizers`, or subclass and override this method in a subclass.
         """
+        print("DEBUG: PATCHED create_optimizer CALLED")
+        from src.external.transformers.src.transformers.models.qwen2.modeling_qwen2 import (
+            LatentGateA,
+        )
+
         opt_model = self.model_wrapped if is_sagemaker_mp_enabled() else self.model
 
         if self.optimizer is None:
@@ -68,12 +71,23 @@ def patch_trainer_optimizer(
                     "params": [
                         p
                         for n, p in opt_model.named_parameters()
-                        if ("latent_gate_a.Lambda" in n and p.requires_grad)
+                        if ("latent_gate_a" in n and p.requires_grad)
                     ],
                     "lr": lr_latent_gate_Lambda,
                     "weight_decay": self.args.weight_decay,
                 },
             ]
+
+            print("DEBUG: param groups summary")
+            for i, g in enumerate(optimizer_grouped_parameters):
+                param_ids = {id(p) for p in g["params"]}
+                names = [
+                    n for n, p in opt_model.named_parameters() if id(p) in param_ids
+                ]
+                print(
+                    f"group {i}: lr={g['lr']}, wd={g.get('weight_decay')}, count={len(g['params'])}"
+                )
+                print("  sample:", names[:5])
 
             if self.optimizer_cls_and_kwargs is not None:
                 optimizer_cls, optimizer_kwargs = self.optimizer_cls_and_kwargs
@@ -100,26 +114,6 @@ def patch_trainer_optimizer(
             self.optimizer = optimizer_cls(
                 optimizer_grouped_parameters, **optimizer_kwargs
             )
-
-            if optimizer_cls.__name__ == "Adam8bit":
-                import bitsandbytes
-
-                manager = bitsandbytes.optim.GlobalOptimManager.get_instance()
-
-                skipped = 0
-                for module in opt_model.modules():
-                    if isinstance(module, nn.Embedding):
-                        skipped += sum(
-                            {
-                                p.data_ptr(): p.numel() for p in module.parameters()
-                            }.values()
-                        )
-                        logger.info(f"skipped {module}: {skipped / 2**20}M params")
-                        manager.register_module_override(
-                            module, "weight", {"optim_bits": 32}
-                        )
-                        logger.debug(f"bitsandbytes: will optimize {module} in fp32")
-                logger.info(f"skipped: {skipped / 2**20}M params")
 
         if is_sagemaker_mp_enabled() and smp is not None:
             self.optimizer = smp.DistributedOptimizer(self.optimizer)
