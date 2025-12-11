@@ -2,6 +2,7 @@ import argparse
 import logging
 import os
 import sys
+from datetime import datetime
 
 project_root = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -43,9 +44,10 @@ def main(args):
     logger.info(
         f"Starting experiment {args.model_name} with group size {args.group_size}"
     )
+    date_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     exp_name = (
         f"./experiments/{args.model_name.split('/')[-1]}-gsm8k-group{args.group_size}"
-        f"-lora{args.lora_rank}-rmin{args.residual_r_min}-temp{args.temperature}-grpo"
+        f"-lora{args.lora_rank}-rmin{args.residual_r_min}-temp{args.temperature}-grpo-{date_time}"
     )
     if os.path.exists(exp_name) and len(os.listdir(exp_name)) > 0:
         print(f"Experiment {exp_name} already exists. Exiting...")

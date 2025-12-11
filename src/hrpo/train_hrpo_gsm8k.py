@@ -57,7 +57,7 @@ def main(args):
     date_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     exp_name = (
         f"./experiments/{args.model_name.split('/')[-1]}-gsm8k-group{args.group_size}"
-        f"-lora{args.lora_rank}-rmin{args.residual_r_min}-temp{args.temperature}-{date_time}"
+        f"-lora{args.lora_rank}-rmin{args.residual_r_min}-temp{args.temperature}-hrpo-{date_time}"
     )
     if os.path.exists(exp_name) and len(os.listdir(exp_name)) > 0:
         print(f"Experiment {exp_name} already exists. Exiting...")
