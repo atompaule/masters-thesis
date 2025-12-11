@@ -98,6 +98,7 @@ def main(args):
     # )
 
     training_args = GRPOConfig(
+        bf16=True,
         use_vllm=False,
         learning_rate=args.lr,
         beta=0.0,  # args.beta,

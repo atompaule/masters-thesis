@@ -113,9 +113,10 @@ def main(args):
     # check_trainable_status(model)
 
     training_args = GRPOConfig(
+        bf16=True,
         use_vllm=False,
         learning_rate=args.lr,
-        beta=0.0, #args.beta TODO: fix weird latent gate params being nan in self.accelerator.unwrap_model(self.model).disable_adapter()
+        beta=0.0,  # args.beta TODO: fix weird latent gate params being nan in self.accelerator.unwrap_model(self.model).disable_adapter()
         adam_beta1=0.9,
         adam_beta2=0.99,
         weight_decay=args.weight_decay,
@@ -167,7 +168,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--lr", type=float, default=5e-6)
     parser.add_argument("--beta", type=float, default=0.005)
-    parser.add_argument("--residual_r_min", type=float, default=0.99)
+    parser.add_argument("--residual_r_min", type=float, default=0.5)
     parser.add_argument("--residual_r_max", type=float, default=0.999)
     parser.add_argument("--lr_residual_gate", type=float, default=1e-4)
     parser.add_argument("--lr_residual_Lambda", type=float, default=1e-3)
