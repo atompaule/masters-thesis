@@ -111,7 +111,7 @@ def evaluate_model(
         prompt_length = prompt_ids.size(1)
 
         # Generate responses
-        outputs = model.generate(
+        outputs, _, _ = model.generate(
             prompt_ids,
             attention_mask=prompt_mask,
             generation_config=GenerationConfig(
