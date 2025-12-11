@@ -168,7 +168,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--lr", type=float, default=5e-6)
     parser.add_argument("--beta", type=float, default=0.005)
-    parser.add_argument("--residual_r_min", type=float, default=0.5)
+    parser.add_argument("--residual_r_min", type=float, default=0.99)
     parser.add_argument("--residual_r_max", type=float, default=0.999)
     parser.add_argument("--lr_residual_gate", type=float, default=1e-4)
     parser.add_argument("--lr_residual_Lambda", type=float, default=1e-3)
