@@ -1,6 +1,3 @@
-[submodule "src/external/hrpo"]
-	path = src/external/hrpo
-	url = https://github.com/atompaule/HRPO.git
 [submodule "src/external/trl"]
 	path = src/external/trl
 	url = https://github.com/atompaule/trl.git
