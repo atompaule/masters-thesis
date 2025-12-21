@@ -1,3 +1,8 @@
+"""
+Debug this via:
+python -m debugpy --connect n-hpc-login1:5678 --wait-for-client src/hrpo/train_hrpo_gsm8k.py --debug True
+"""
+
 import argparse
 import logging
 import os

@@ -1,3 +1,8 @@
+"""
+Debug this via:
+python -m debugpy --connect n-hpc-login1:5678 --wait-for-client src/hrpo/eval_hrpo_gsm8k.py --checkpoint_path /work/utsch/masters-thesis/experiments/Qwen2.5-1.5B-Instruct-gsm8k-group4-lora32-rmin0.5-temp0.5-hrpo-2025-12-12_06-45-53/final_model
+"""
+
 import json
 import os
 import sys
