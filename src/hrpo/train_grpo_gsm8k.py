@@ -14,6 +14,7 @@ sys.path.insert(0, os.path.join(project_root, "src", "external", "trl"))
 from datasets import Dataset, load_dataset
 from peft import LoraConfig, TaskType, get_peft_model
 
+import wandb
 from src.external.transformers.src.transformers.models.auto import AutoTokenizer
 from src.external.transformers.src.transformers.models.qwen2.modeling_qwen2 import (
     Qwen2ForCausalLM,
@@ -44,16 +45,17 @@ def main(args):
     logger.info(
         f"Starting experiment {args.model_name} with group size {args.group_size}"
     )
-    date_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    exp_name = (
-        f"./experiments/{args.model_name.split('/')[-1]}-gsm8k-group{args.group_size}"
-        f"-lora{args.lora_rank}-rmin{args.residual_r_min}-temp{args.temperature}-grpo-{date_time}"
-    )
+
+    if wandb.run is None:
+        wandb.init(project=os.environ.get("WANDB_PROJECT", "masters-thesis"))
+    run_name = wandb.run.name
+
+    date_time = datetime.now().strftime("%Y-%m-%d_%H")
+    exp_name = f"./experiments/gsm8k/{args.model_name.split('/')[-1]}/grpo/{date_time}-{run_name}"
     if os.path.exists(exp_name) and len(os.listdir(exp_name)) > 0:
         print(f"Experiment {exp_name} already exists. Exiting...")
         exit()
 
-    # tokenizer = Qwen2Tokenizer.from_pretrained("Qwen/Qwen-tokenizer")
     tokenizer = AutoTokenizer.from_pretrained(args.model_name)
     tokenizer.padding_side = "left"
     if tokenizer.pad_token is None:
@@ -84,18 +86,8 @@ def main(args):
                 "up_proj",
                 "down_proj",
             ],
-            # modules_to_save=[
-            #     "latent_gate_r",
-            #     "latent_gate_i",
-            #     "latent_gate_a",
-            # ],
         ),
     )
-
-    # model.model.model.latent_gate_a.reset_lambda_parameters(
-    #     r_min=args.residual_r_min,
-    #     r_max=args.residual_r_max,
-    # )
 
     training_args = GRPOConfig(
         bf16=True,
