@@ -10,5 +10,6 @@ dependencies = [
     "debugpy>=1.8.17",
     "matplotlib>=3.10.7",
     "peft>=0.18.0",
+    "scipy>=1.16.3",
     "wandb>=0.23.0",
 ]
