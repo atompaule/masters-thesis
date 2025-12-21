@@ -74,7 +74,7 @@ def patch_trainer_optimizer(trainer, lr_latent_gates=1e-4, lr_latent_gate_Lambda
                         if ("latent_gate_a" in n and p.requires_grad)
                     ],
                     "lr": lr_latent_gate_Lambda,
-                    "weight_decay": self.args.weight_decay,
+                    "weight_decay": 0.0,
                 },
             ]
 
