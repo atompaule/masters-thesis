@@ -79,7 +79,7 @@ def main(args):
 
     model = HRPOQwen2ForCausalLM.from_pretrained(
         args.model_name,
-        torch_dtype="auto",
+        torch_dtype=torch.float32,
         device_map="auto",
     )
     model.answer_start = ANSWER_START
@@ -120,7 +120,7 @@ def main(args):
     # check_trainable_status(model)
 
     training_args = GRPOConfig(
-        bf16=True,
+        bf16=False,
         use_vllm=False,
         learning_rate=args.lr,
         beta=0.0,  # args.beta TODO: fix weird latent gate params being nan in self.accelerator.unwrap_model(self.model).disable_adapter()
@@ -178,12 +178,12 @@ if __name__ == "__main__":
     parser.add_argument("--beta", type=float, default=0.005)
     parser.add_argument("--residual_r_min", type=float, default=0.99)
     parser.add_argument("--residual_r_max", type=float, default=0.999)
-    parser.add_argument("--lr_residual_gate", type=float, default=1e-2)
-    parser.add_argument("--lr_residual_Lambda", type=float, default=1e-1)
+    parser.add_argument("--lr_residual_gate", type=float, default=1e-4)
+    parser.add_argument("--lr_residual_Lambda", type=float, default=1e-3)
     parser.add_argument("--weight_decay", type=float, default=0.1)
     parser.add_argument("--warmup_ratio", type=float, default=0.1)
     parser.add_argument("--lr_scheduler_type", type=str, default="cosine")
-    parser.add_argument("--optimizer", type=str, default="paged_adamw_8bit")
+    parser.add_argument("--optimizer", type=str, default="adamw_torch")
     parser.add_argument("--max_grad_norm", type=float, default=0.1)
 
     parser.add_argument("--group_size", type=int, default=4)

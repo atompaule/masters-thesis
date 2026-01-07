@@ -48,7 +48,7 @@ def evaluate_model(
 
     model = HRPOQwen2ForCausalLM.from_pretrained(
         model_path,
-        torch_dtype="auto",
+        torch_dtype=torch.float32,
         device_map="auto",
     )
     model.answer_start = ANSWER_START

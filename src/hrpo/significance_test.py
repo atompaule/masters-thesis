@@ -1,3 +1,10 @@
+"""
+Run this via:
+python src/hrpo/significance_test.py \
+    --baseline /work/$USER/masters-thesis/experiments/gsm8k/Qwen2.5-1.5B-Instruct/grpo/Qwen2.5-1.5B-Instruct-gsm8k-group4-lora32-rmin0.99-temp0.5-grpo/final_model/eval_results.json \
+    --experiment /work/$USER/masters-thesis/experiments/gsm8k/Qwen2.5-1.5B-Instruct/hrpo/2026-01-06_13-smart-firebrand-179/final_model/eval_results.json
+"""
+
 import argparse
 import json
 import math
@@ -135,8 +142,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Perform McNemar's significance test on two GSM8k eval_results.json files."
     )
-    parser.add_argument("baseline", help="Path to the baseline eval_results.json")
-    parser.add_argument("experiment", help="Path to the experiment eval_results.json")
+    parser.add_argument("--baseline", help="Path to the baseline eval_results.json")
+    parser.add_argument("--experiment", help="Path to the experiment eval_results.json")
 
     args = parser.parse_args()
 

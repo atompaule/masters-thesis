@@ -4,6 +4,8 @@ import os
 import sys
 from datetime import datetime
 
+import torch
+
 project_root = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 )
@@ -64,7 +66,7 @@ def main(args):
 
     model = Qwen2ForCausalLM.from_pretrained(
         args.model_name,
-        torch_dtype="auto",
+        torch_dtype=torch.float32,
         device_map="auto",
     )
     model.answer_start = ANSWER_START
@@ -90,7 +92,7 @@ def main(args):
     )
 
     training_args = GRPOConfig(
-        bf16=True,
+        bf16=False,
         use_vllm=False,
         learning_rate=args.lr,
         beta=0.0,  # args.beta,
@@ -112,6 +114,7 @@ def main(args):
         save_steps=250,
         save_total_limit=3,
         report_to="wandb",
+        run_name=run_name,
         output_dir=exp_name,
     )
 
@@ -146,7 +149,7 @@ if __name__ == "__main__":
     parser.add_argument("--weight_decay", type=float, default=0.1)
     parser.add_argument("--warmup_ratio", type=float, default=0.1)
     parser.add_argument("--lr_scheduler_type", type=str, default="cosine")
-    parser.add_argument("--optimizer", type=str, default="paged_adamw_8bit")
+    parser.add_argument("--optimizer", type=str, default="adamw_torch")
     parser.add_argument("--max_grad_norm", type=float, default=0.1)
 
     parser.add_argument("--group_size", type=int, default=4)
