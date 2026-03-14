@@ -1,3 +1,5 @@
+import math
+
 import pandas as pd
 import torch
 import torch.nn.functional as F
@@ -15,8 +17,9 @@ PROMPT = "The fundamental difference between human consciousness and artificial 
 
 STEPS = 15
 K = 10
+DISPLAY_K = K * 2  # The Deep-Field Lens
 TEMPERATURE = 2.0
-LOG_FILE = "llama_8b_panopticon_analysis.txt"
+LOG_FILE = "llama_8b_master_panopticon.txt"
 
 
 def emit(text, file_handle):
@@ -44,17 +47,20 @@ pd.set_option("display.float_format", "{:.4f}".format)
 pd.set_option("display.width", 1000)
 
 with open(LOG_FILE, "w", encoding="utf-8") as f:
-    emit(f"LLAMA 8B COGNITION LOG: THE PANOPTICON", f)
+    emit(f"🌌 LLAMA 8B COGNITION LOG: THE MASTER PANOPTICON 🌌", f)
     emit(f"Mode: Natural Autoregressive Generation with Silent Synthetic Forging.", f)
-    emit(f"Steps: {STEPS} | Temp: {TEMPERATURE}\n", f)
+    emit(
+        f"Steps: {STEPS} | Target Top-K: {K} | Deep-Field View: {DISPLAY_K} | Temp: {TEMPERATURE}\n",
+        f,
+    )
 
     context_so_far = PROMPT
 
     with torch.no_grad():
         for step in range(STEPS):
-            emit(f"\n{'='*120}", f)
+            emit(f"\n{'='*160}", f)
             emit(f"⏱️ TIME STEP {step + 1} | Context: '...{context_so_far[-60:]}'", f)
-            emit(f"{'='*120}", f)
+            emit(f"{'='*160}", f)
 
             # 1. Forward Pass (Standard token inputs, no synthetic injection)
             outputs = model(input_ids=input_ids)
@@ -95,13 +101,13 @@ with open(LOG_FILE, "w", encoding="utf-8") as f:
             top_k_raw_embs = raw_embeddings[top_k_ids]
             avg_target_mag = torch.norm(top_k_raw_embs, p=2, dim=1).mean().item()
 
-            # The Raw Soft Chassis (No Temperature) for pure probability tracking
+            # 1. The Pure Probabilistic Control (No Temp)
             raw_soft_raw = torch.sum(
                 top_k_raw_embs * top_k_probs.unsqueeze(1), dim=0, keepdim=True
             )
-            raw_soft_norm = F.normalize(raw_soft_raw, p=2, dim=1)
+            v_soft = F.normalize(raw_soft_raw, p=2, dim=1) * avg_target_mag
 
-            # The Tempered Soft Chassis (For the Solver's drop point)
+            # 2. The Tempered Chassis (For the Solver's Drop Point)
             temp_soft_raw = torch.sum(
                 top_k_raw_embs * adj_probs.unsqueeze(1), dim=0, keepdim=True
             )
@@ -110,16 +116,13 @@ with open(LOG_FILE, "w", encoding="utf-8") as f:
             # A. The Baseline
             v_baseline = top_k_raw_embs[0:1]
 
-            # B. Soft Thinking (Raw Probabilities)
-            v_soft = raw_soft_norm * avg_target_mag
-
-            # C. Unweighted Centroid (Replacing the old Chimera)
+            # B. Unweighted Centroid (Democratic Center)
             centroid_raw = torch.mean(top_k_raw_embs, dim=0, keepdim=True)
             v_centroid = F.normalize(centroid_raw, p=2, dim=1) * avg_target_mag
 
-            # D. Mass-Equalized Genetic Chimera
+            # C. Mass-Equalized Genetic Chimera
             with torch.enable_grad():
-                v_mass_equalized_chimera = forge_mass_equalized_chimera(
+                v_chimera = forge_mass_equalized_chimera(
                     top_k_ids,
                     norm_dictionary,
                     dict_mean,
@@ -128,23 +131,27 @@ with open(LOG_FILE, "w", encoding="utf-8") as f:
                     adj_probs,
                 )
 
-            # E. Geometric Solver
+            # D. Geometric Solver
             target_embs_norm = norm_dictionary[top_k_ids]
             with torch.enable_grad():
                 v_solver = fast_geometric_solver(
                     target_embs_norm,
                     top_k_ids,
                     norm_dictionary,
-                    temp_soft_norm,  # Deploying the probe at the tempered center
+                    temp_soft_norm,
                     avg_target_mag,
                     adj_probs,
                 )
+
+            # E. The CoLaR Geometry (Native Probability Scaling)
+            # Dividing the unweighted sum by the square root of K
+            v_colar = torch.sum(top_k_raw_embs, dim=0, keepdim=True) / math.sqrt(K)
 
             # --- THE COMPARATIVE AUTOPSY ---
 
             # Stack the ghosts to measure their mass and angles
             vectors = torch.cat(
-                [v_baseline, v_soft, v_centroid, v_mass_equalized_chimera, v_solver],
+                [v_baseline, v_soft, v_centroid, v_chimera, v_solver, v_colar],
                 dim=0,
             )
 
@@ -153,7 +160,7 @@ with open(LOG_FILE, "w", encoding="utf-8") as f:
             vectors_unit = F.normalize(vectors, p=2, dim=1)
 
             sim_matrix = torch.matmul(vectors_unit, vectors_unit.T)
-            labels = ["Baseline", "Soft", "Centroid", "Mass-Eq Chimera", "Solver"]
+            labels = ["Baseline", "Soft", "Centroid", "Chimera", "Solver", "CoLaR"]
             df = pd.DataFrame(sim_matrix.cpu().numpy(), index=labels, columns=labels)
 
             emit(
@@ -162,12 +169,14 @@ with open(LOG_FILE, "w", encoding="utf-8") as f:
             )
             emit(df.to_string(), f)
 
-            # --- THE SIDE-BY-SIDE SPECTROMETER ---
-            emit(f"\n--- TOP {K} NEAREST NEIGHBORS SIDE-BY-SIDE ---", f)
+            # --- THE DEEP-FIELD SPECTROMETER ---
+            emit(f"\n--- TOP {DISPLAY_K} NEAREST NEIGHBORS SIDE-BY-SIDE ---", f)
             cos_sims_all = torch.matmul(vectors_unit, norm_dictionary.T)
-            top_k_vals, top_k_idx = torch.topk(cos_sims_all, K, dim=1)
+            top_k_vals, top_k_idx = torch.topk(cos_sims_all, DISPLAY_K, dim=1)
 
-            col_width = 30
+            col_width = (
+                25  # Slightly squeezed to fit 6 columns elegantly in standard terminals
+            )
 
             # Build the header with exact magnitudes stamped on it
             header = f"{'Rank':<4} |"
@@ -178,7 +187,7 @@ with open(LOG_FILE, "w", encoding="utf-8") as f:
             emit("-" * len(header[:-2]), f)
 
             # Build the rows with the asterisk Geiger counter
-            for rank in range(K):
+            for rank in range(DISPLAY_K):
                 row_str = f"{rank+1:<4} |"
                 for i in range(len(labels)):
                     token_id = top_k_idx[i, rank].item()
@@ -186,8 +195,8 @@ with open(LOG_FILE, "w", encoding="utf-8") as f:
 
                     # Clean up the visual noise
                     cw = w.replace("\n", "\\n").replace("\r", "\\r")
-                    if len(cw) > 13:
-                        cw = cw[:10] + "..."
+                    if len(cw) > 10:
+                        cw = cw[:8] + ".."
 
                     # The Geiger Counter: Does this token match our original targets?
                     marker = "*" if token_id in target_ids_list else " "

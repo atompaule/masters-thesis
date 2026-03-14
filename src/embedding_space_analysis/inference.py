@@ -1,9 +1,15 @@
+import math
+
+import pandas as pd
 import torch
 import torch.nn.functional as F
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 # --- IMPORT THE FORGES ---
-from src.embedding_space_analysis.chimera import forge_mass_equalized_chimera
+from src.embedding_space_analysis.chimera import (
+    forge_fluid_chimera,
+    forge_mass_equalized_chimera,
+)
 from src.embedding_space_analysis.solver import fast_geometric_solver
 
 # --- THE TETHER ---
@@ -29,7 +35,7 @@ FULL_PROMPT = f"""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
 THOUGHT_STEPS = 15
 SPEAK_STEPS = 30
 K = 10
-# Controls the severity of the probability hierarchy for the advanced forges.
+# Controls the severity of the probability hierarchy.
 # 1.0 = Standard. >1.0 = Melts the top token, empowering the underdogs. <1.0 = Sharpens the top token.
 TEMPERATURE = 2.0
 LOG_FILE = "llama_8b_subconscious_gestation.txt"
@@ -66,9 +72,10 @@ algorithms = [
     "1. DISCRETE BASELINE",
     "2. SOFT THINKING (Raw)",
     "3. UNWEIGHTED CENTROID",
-    "4. MASS-EQUALIZED CHIMERA (Temp)",
+    "4. MASS-EQUALIZED GENETIC CHIMERA (Temp)",
     "5. GEOMETRIC SOLVER (Temp)",
-    "6. COCONUT",
+    "6. COLAR (Scaled Formula)",
+    "7. COCONUT",
 ]
 
 with open(LOG_FILE, "w", encoding="utf-8") as f:
@@ -81,8 +88,8 @@ with open(LOG_FILE, "w", encoding="utf-8") as f:
 
     with torch.no_grad():
         for algo_name in algorithms:
-            # Skipping the raw baselines to focus entirely on the synthetic geometry
-            if algo_name == "1. DISCRETE BASELINE" or algo_name == "6. COCONUT":
+            # Skipping the raw baselines to focus on the synthetic geometry
+            if "BASELINE" in algo_name or "COCONUT" in algo_name:
                 continue
 
             emit(f"\n{'='*80}", f)
@@ -123,24 +130,24 @@ with open(LOG_FILE, "w", encoding="utf-8") as f:
                 top_k_raw_embs = raw_embeddings[top_k_ids]
                 avg_target_mag = torch.norm(top_k_raw_embs, p=2, dim=1).mean().item()
 
-                # 1. The Pure Probabilistic Control (No Temp)
-                raw_soft_raw = torch.sum(
-                    top_k_raw_embs * top_k_probs.unsqueeze(1), dim=0, keepdim=True
-                )
-                raw_soft_norm = F.normalize(raw_soft_raw, p=2, dim=1)
-
-                # 2. The Tempered Chassis (For the Solver's Drop Point)
-                temp_soft_raw = torch.sum(
+                # Calculate the core tempered chassis once
+                soft_raw = torch.sum(
                     top_k_raw_embs * adj_probs.unsqueeze(1), dim=0, keepdim=True
                 )
-                temp_soft_norm = F.normalize(temp_soft_raw, p=2, dim=1)
+                soft_norm = F.normalize(soft_raw, p=2, dim=1)
 
                 # Route to the appropriate mathematical forge
                 if "SOFT THINKING" in algo_name:
-                    next_vector = raw_soft_norm * avg_target_mag
+                    # No Temp for Soft Thinking Control
+                    raw_soft = torch.sum(
+                        top_k_raw_embs * top_k_probs.unsqueeze(1), dim=0, keepdim=True
+                    )
+                    next_vector = F.normalize(raw_soft, p=2, dim=1) * avg_target_mag
+
                 elif "CENTROID" in algo_name:
                     centroid_raw = torch.mean(top_k_raw_embs, dim=0, keepdim=True)
                     next_vector = F.normalize(centroid_raw, p=2, dim=1) * avg_target_mag
+
                 elif "MASS-EQUALIZED" in algo_name:
                     with torch.enable_grad():
                         next_vector = forge_mass_equalized_chimera(
@@ -151,6 +158,7 @@ with open(LOG_FILE, "w", encoding="utf-8") as f:
                             avg_target_mag,
                             adj_probs,
                         )
+
                 elif "GEOMETRIC SOLVER" in algo_name:
                     target_embs_norm = norm_dictionary[top_k_ids]
                     with torch.enable_grad():
@@ -158,10 +166,16 @@ with open(LOG_FILE, "w", encoding="utf-8") as f:
                             target_embs_norm,
                             top_k_ids,
                             norm_dictionary,
-                            temp_soft_norm,  # Dropping the sniper at the tempered location
+                            soft_norm,
                             avg_target_mag,
                             adj_probs,
                         )
+
+                elif "COLAR" in algo_name:
+                    # The CoLaR scaling: Summing the top K elements and dividing by sqrt(K)
+                    c = K
+                    colar_raw = torch.sum(top_k_raw_embs, dim=0, keepdim=True)
+                    next_vector = colar_raw / math.sqrt(c)
 
                 # --- THE X-RAY ---
                 unit_next_vector = F.normalize(next_vector, p=2, dim=1)
@@ -170,7 +184,13 @@ with open(LOG_FILE, "w", encoding="utf-8") as f:
                 top_sim_vals, top_sim_idxs = torch.topk(cos_sims, K)
                 top_sim_words = tokenizer.batch_decode(top_sim_idxs)
 
-                emit(f"\n    [Forged Geometry Nearest Neighbors]", f)
+                # Note: We display the raw mass here so you can verify how well CoLaR preserves it natively
+                actual_mag = torch.norm(next_vector, p=2, dim=1).item()
+                emit(
+                    f"\n    [Forged Geometry Nearest Neighbors | Mass: {actual_mag:.4f} | Target Mass: {avg_target_mag:.4f}]",
+                    f,
+                )
+
                 for rank, (word, sim) in enumerate(zip(top_sim_words, top_sim_vals)):
                     clean_word = word.replace("\n", "\\n").replace("\r", "\\r")
                     marker = "*" if word in top_k_words else " "
