@@ -29,7 +29,6 @@ def main(args):
     logger.info(
         f"Starting experiment {args.model_name} with group size {args.group_size}"
     )
-    print(f"Starting experiment {args.model_name} with group size {args.group_size}")
     exp_name = (
         f"./experiments/{args.model_name.split('/')[-1]}-gsm8k-group{args.group_size}"
         f"-lora{args.lora_rank}-rmin{args.residual_r_min}-temp{args.temperature}"

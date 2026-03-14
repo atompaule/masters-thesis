@@ -1,15 +1,33 @@
 import argparse
 import logging
 import os
+import sys
+from datetime import datetime
 
-import unsloth  # unsloth explicitly states it needs to be imported first
+import torch
+
+project_root = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+)
+sys.path.insert(0, project_root)
+sys.path.insert(0, os.path.join(project_root, "src", "external", "transformers", "src"))
+sys.path.insert(0, os.path.join(project_root, "src", "external", "trl"))
+
 from datasets import Dataset, load_dataset
-from patch import patch_trainer_optimizer
-from trl import GRPOConfig, GRPOTrainer
-from unsloth import FastLanguageModel, PatchFastRL, is_bfloat16_supported
-from utils import ANSWER_START, get_reward_func, process_gsm8k, process_gsm8k_answer
+from peft import LoraConfig, TaskType, get_peft_model
 
-PatchFastRL("GRPO", FastLanguageModel)
+import wandb
+from src.external.transformers.src.transformers.models.auto import AutoTokenizer
+from src.external.transformers.src.transformers.models.qwen2.modeling_qwen2 import (
+    Qwen2ForCausalLM,
+)
+from src.external.trl.trl.trainer.grpo_trainer import GRPOConfig, GRPOTrainer
+from src.hrpo.utils import (
+    ANSWER_START,
+    get_reward_func,
+    process_gsm8k,
+    process_gsm8k_answer,
+)
 
 os.environ["WANDB_PROJECT"] = "masters-thesis"
 
@@ -29,57 +47,55 @@ def main(args):
     logger.info(
         f"Starting experiment {args.model_name} with group size {args.group_size}"
     )
-    print(f"Starting experiment {args.model_name} with group size {args.group_size}")
-    exp_name = (
-        f"./experiments/{args.model_name.split('/')[-1]}-gsm8k-group{args.group_size}"
-        f"-lora{args.lora_rank}-rmin{args.residual_r_min}-temp{args.temperature}"
-    )
+
+    if wandb.run is None:
+        wandb.init(project=os.environ.get("WANDB_PROJECT", "masters-thesis"))
+    run_name = wandb.run.name
+
+    date_time = datetime.now().strftime("%Y-%m-%d_%H")
+    exp_name = f"./experiments/gsm8k/{args.model_name.split('/')[-1]}/grpo/{date_time}-{run_name}"
     if os.path.exists(exp_name) and len(os.listdir(exp_name)) > 0:
         print(f"Experiment {exp_name} already exists. Exiting...")
         exit()
 
-    model, tokenizer = FastLanguageModel.from_pretrained(
-        model_name=args.model_name,
-        max_seq_length=args.max_prompt_length + args.max_completion_length,
-        load_in_4bit=False,
-        load_in_8bit=False,
-        fast_inference=False,
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name)
+    tokenizer.padding_side = "left"
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.model_max_length = args.max_prompt_length + args.max_completion_length
+
+    model = Qwen2ForCausalLM.from_pretrained(
+        args.model_name,
+        torch_dtype=torch.float32,
+        device_map="auto",
     )
     model.answer_start = ANSWER_START
 
-    tokenizer.padding_side = "left"
-    tokenizer.pad_token = tokenizer.eos_token
-
-    model = FastLanguageModel.get_peft_model(
+    model = get_peft_model(
         model,
-        r=args.lora_rank,
-        target_modules=[
-            "q_proj",
-            "k_proj",
-            "v_proj",
-            "o_proj",
-            "gate_proj",
-            "up_proj",
-            "down_proj",
-        ],
-        # modules_to_save=[
-        #     "thinking_residual_gate_r",
-        #     "thinking_residual_gate_i",
-        #     "thinking_residual_Lambda",
-        # ],
-        lora_alpha=args.lora_rank * 2,
-        use_gradient_checkpointing="unsloth",
-        random_state=args.seed,
+        LoraConfig(
+            r=args.lora_rank,
+            lora_alpha=args.lora_rank * 2,
+            lora_dropout=0.0,
+            bias="none",
+            task_type=TaskType.CAUSAL_LM,
+            target_modules=[
+                "q_proj",
+                "k_proj",
+                "v_proj",
+                "o_proj",
+                "gate_proj",
+                "up_proj",
+                "down_proj",
+            ],
+        ),
     )
-    # model.model.model.thinking_residual_Lambda.reset_lambda_parameters(
-    #     r_min=args.residual_r_min,
-    #     r_max=args.residual_r_max,
-    # )
 
     training_args = GRPOConfig(
+        bf16=False,
         use_vllm=False,
         learning_rate=args.lr,
-        beta=args.beta,
+        beta=0.0,  # args.beta,
         adam_beta1=0.9,
         adam_beta2=0.99,
         weight_decay=args.weight_decay,
@@ -88,8 +104,6 @@ def main(args):
         optim=args.optimizer,
         max_grad_norm=args.max_grad_norm,
         logging_steps=1,
-        bf16=is_bfloat16_supported(),
-        fp16=not is_bfloat16_supported(),
         temperature=args.temperature,
         num_generations=args.group_size,
         gradient_accumulation_steps=args.gradient_accumulation_steps,
@@ -100,6 +114,7 @@ def main(args):
         save_steps=250,
         save_total_limit=3,
         report_to="wandb",
+        run_name=run_name,
         output_dir=exp_name,
     )
 
@@ -113,11 +128,11 @@ def main(args):
         args=training_args,
         train_dataset=dataset,
     )
-    patch_trainer_optimizer(
-        trainer,
-        args.lr_residual_gate,
-        args.lr_residual_Lambda,
-    )
+    # patch_trainer_optimizer(
+    #     trainer,
+    #     args.lr_residual_gate,
+    #     args.lr_residual_Lambda,
+    # )
     trainer.train()
 
 
@@ -134,7 +149,7 @@ if __name__ == "__main__":
     parser.add_argument("--weight_decay", type=float, default=0.1)
     parser.add_argument("--warmup_ratio", type=float, default=0.1)
     parser.add_argument("--lr_scheduler_type", type=str, default="cosine")
-    parser.add_argument("--optimizer", type=str, default="paged_adamw_8bit")
+    parser.add_argument("--optimizer", type=str, default="adamw_torch")
     parser.add_argument("--max_grad_norm", type=float, default=0.1)
 
     parser.add_argument("--group_size", type=int, default=4)
@@ -145,7 +160,6 @@ if __name__ == "__main__":
     parser.add_argument("--max_completion_length", type=int, default=1024)
 
     parser.add_argument("--model_name", type=str, default="Qwen/Qwen2.5-1.5B-Instruct")
-    parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 
     # "Qwen/Qwen2.5-1.5B-Instruct"
