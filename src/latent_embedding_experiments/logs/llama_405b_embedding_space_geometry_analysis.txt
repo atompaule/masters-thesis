@@ -1,0 +1,42 @@
+Vocab size: 128256
+Embedding dimension: 16384
+Mean norm: 0.8837
+Median norm: 0.9278
+Std norm:  0.1658
+
+Top tokens by norm:
+1.2576 | '+/'
+1.2180 | '#!/'
+1.1944 | 'stackoverflow'
+1.1853 | ' aforementioned'
+1.1850 | ' unf'
+1.1786 | 'limits'
+1.1778 | ' Newfoundland'
+1.1770 | ' spite'
+1.1759 | ' glimps'
+1.1719 | 'infeld'
+1.1703 | ' FIG'
+1.1700 | 'ammu'
+1.1699 | ' django'
+1.1698 | ' Sect'
+1.1693 | 'utherford'
+
+Lowest tokens by norm:
+0.0087 | '<|reserved_special_token_54|>'
+0.0087 | '<|reserved_special_token_178|>'
+0.0087 | '<|reserved_special_token_75|>'
+0.0087 | '<|reserved_special_token_151|>'
+0.0087 | '<|reserved_special_token_225|>'
+0.0087 | '<|reserved_special_token_57|>'
+0.0087 | '<|reserved_special_token_206|>'
+0.0087 | '<|reserved_special_token_202|>'
+0.0087 | 'атися'
+0.0087 | '�'
+0.0087 | '<|reserved_special_token_173|>'
+0.0087 | '<|reserved_special_token_152|>'
+0.0087 | '<|reserved_special_token_28|>'
+0.0087 | '<|reserved_special_token_234|>'
+0.0087 | '<|reserved_special_token_73|>'
+
+Average cosine similarity: 0.0064
+Near-isotropic distribution

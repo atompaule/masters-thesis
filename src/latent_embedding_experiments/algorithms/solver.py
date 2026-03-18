@@ -2,6 +2,7 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 
+
 def fast_geometric_solver(
     target_embs_norm,
     target_ids,
@@ -44,7 +45,7 @@ def fast_geometric_solver(
         sim_diffs = t_sims[1:] - t_sims[:-1]
         p_gaps = adj_probs[:-1] - adj_probs[1:]
         margins = p_gaps * 0.1
-        
+
         # Brutal ReLU: gradient snaps to zero the instant the margin is met
         ranking_loss = torch.sum(F.relu(sim_diffs + margins))
 
