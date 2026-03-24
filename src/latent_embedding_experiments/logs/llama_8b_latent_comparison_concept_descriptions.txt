@@ -1,68 +1,570 @@
-🌌 IN VIVO VECTOR LAB 🌌
+🌌 LATENT INTERROGATION LAB 🌌
+Base Temp: 0.6 | Entropy Bounds: [1.80, 2.10]
 
 ========================================================================================================================
-🧪 The Luxury vs. Greed Halo
+🧪 Real top-10 (8B): after '...consciousness and artificial intelligence is' (llama_8b_latent_comparison_sequence_discrete_top1.txt)
 ========================================================================================================================
 
-Input Distribution:
-  1. rich       | 51.98%
-  2. gold       | 26.69%
-  3. fine       | 13.70%
-  4. cost       |  5.04%
-  5. envy       |  2.59%
+--- THE CHEMICAL BASELINE (Input Anatomy) ---
+  Standard Temp (T=0.6) Entropy: 1.7164
+  Bounded Temp  (T=0.7601) Entropy: 1.9500
+
+  ID     | Token        | Logit  | Soft P   | Ent P    | Magnitude
+  ----------------------------------------------------------------
+  5845   | ability      |  17.0 |   50.53% |   39.55% |   0.629
+  1648   | way          |  16.1 |   10.83% |   11.73% |   0.506
+  9546   | presence     |  16.0 |    8.88% |   10.03% |   0.657
+  7138   | nature       |  15.9 |    8.00% |    9.23% |   0.611
+  3823   | human        |  15.6 |    5.09% |    6.46% |   0.615
+  8824   | capacity     |  15.5 |    4.40% |    5.76% |   0.613
+  4846   | former       |  15.4 |    3.77% |    5.09% |   0.637
+  44122  | subjective   |  15.4 |    3.52% |    4.83% |   0.786
+  2592   | source       |  15.3 |    2.82% |    4.05% |   0.562
+  23965  | complexity   |  15.1 |    2.15% |    3.27% |   0.672
+
+--- PRE-FORGE CROSS-SIMILARITY (Internal Gravity) ---
+            ability    way  presence  nature  human  capacity  former  subjective  source  complexity
+ability      1.0000 0.1356    0.1626  0.1111 0.0899    0.2780  0.0725      0.0625  0.0948      0.0992
+way          0.1356 1.0000    0.0936  0.1219 0.0765    0.0890  0.0685      0.0235  0.0808      0.0598
+presence     0.1626 0.0936    1.0000  0.1224 0.0678    0.1186  0.0761      0.0373  0.1116      0.0666
+nature       0.1111 0.1219    0.1224  1.0000 0.1008    0.1102  0.0355      0.0827  0.1238      0.0997
+human        0.0899 0.0765    0.0678  0.1008 1.0000    0.0827  0.0813      0.0836  0.0896      0.0711
+capacity     0.2780 0.0890    0.1186  0.1102 0.0827    1.0000  0.0441      0.0379  0.1063      0.1364
+former       0.0725 0.0685    0.0761  0.0355 0.0813    0.0441  1.0000      0.0309  0.0874      0.0472
+subjective   0.0625 0.0235    0.0373  0.0827 0.0836    0.0379  0.0309      1.0000  0.0450      0.0692
+source       0.0948 0.0808    0.1116  0.1238 0.0896    0.1063  0.0874      0.0450  1.0000      0.0532
+complexity   0.0992 0.0598    0.0666  0.0997 0.0711    0.1364  0.0472      0.0692  0.0532      1.0000
+
+
 
 --- Cosine Similarity (Geometry) ---
-Rank | CoLaR                          | Soft                           | Solver                        
----------------------------------------------------------------------------------------------------------
-1    | *' rich' (0.534)               | *' rich' (0.887)               | *' rich' (0.816)              
-2    | *' envy' (0.520)               | *' gold' (0.519)               | *' gold' (0.483)              
-3    | *' gold' (0.505)               |  ' Rich' (0.400)               | *' fine' (0.332)              
-4    | *' fine' (0.499)               | *' fine' (0.352)               | *' cost' (0.294)              
-5    | *' cost' (0.470)               |  '-rich' (0.349)               | *' envy' (0.286)              
-6    |  ' Gold' (0.335)               |  'Rich' (0.344)                |  ' Gold' (0.261)              
-7    |  ' Cost' (0.323)               |  ' Gold' (0.333)               |  ' Rich' (0.259)              
-8    |  ' costs' (0.316)              |  ' richer' (0.300)             |  '-rich' (0.225)              
-9    |  ' Fine' (0.271)               |  'Gold' (0.268)                |  'Rich' (0.216)               
-10   |  ' Rich' (0.262)               |  ' richest' (0.263)            |  ' richer' (0.216)            
+Rank | CoLaR                          | Soft                           | Soft-Ent                       | Solver                        
+------------------------------------------------------------------------------------------------------------------------------------------
+1    | *' ability' (0.495)            | *' ability' (0.938)            | *' ability' (0.882)            | *' ability' (0.579)           
+2    | *' capacity' (0.466)           |  ' Ability' (0.457)            |  ' abilities' (0.438)          | *' way' (0.460)               
+3    | *' presence' (0.445)           |  ' abilities' (0.454)          |  ' Ability' (0.431)            | *' presence' (0.436)          
+4    | *' nature' (0.443)             | *' capacity' (0.370)           | *' capacity' (0.403)           | *' nature' (0.403)            
+5    | *' complexity' (0.418)         | *' presence' (0.347)           | *' presence' (0.398)           | *' human' (0.348)             
+6    | *' human' (0.408)              |  ' capability' (0.343)         | *' way' (0.353)                | *' capacity' (0.328)          
+7    | *' subjective' (0.406)         |  ' inability' (0.321)          | *' nature' (0.347)             | *' former' (0.295)            
+8    | *' source' (0.399)             | *' way' (0.312)                |  ' capability' (0.344)         | *' subjective' (0.294)        
+9    | *' way' (0.368)                |  'Ability' (0.308)             |  ' inability' (0.312)          | *' source' (0.284)            
+10   | *' former' (0.366)             | *' nature' (0.291)             |  'Ability' (0.295)             | *' complexity' (0.274)        
 
 --- Dot Product (Magnitude Bias) ---
-Rank | CoLaR                          | Soft                           | Solver                        
----------------------------------------------------------------------------------------------------------
-1    | *' envy' (0.293)               | *' rich' (0.236)               | *' rich' (0.338)              
-2    | *' rich' (0.250)               | *' gold' (0.128)               | *' gold' (0.185)              
-3    | *' fine' (0.229)               |  ' Rich' (0.107)               | *' envy' (0.143)              
-4    | *' gold' (0.219)               |  '-rich' (0.105)               | *' fine' (0.134)              
-5    | *' cost' (0.199)               |  'Rich' (0.097)                | *' cost' (0.110)              
-6    |  ' Cost' (0.146)               |  ' richer' (0.095)             |  ' wealthy' (0.109)           
-7    |  ' Gold' (0.145)               | *' fine' (0.092)               |  ' Rich' (0.108)              
-8    |  ' costs' (0.143)              |  ' richest' (0.085)            |  ' richest' (0.107)           
-9    |  ' Fine' (0.127)               |  ' wealthy' (0.083)            |  ' richer' (0.106)            
-10   |  ' Rich' (0.124)               |  ' Gold' (0.082)               |  '-rich' (0.104)              
+Rank | CoLaR                          | Soft                           | Soft-Ent                       | Solver                        
+------------------------------------------------------------------------------------------------------------------------------------------
+1    | *' subjective' (0.268)         | *' ability' (0.224)            | *' ability' (0.186)            | *' ability' (0.229)           
+2    | *' ability' (0.261)            |  ' abilities' (0.123)          |  ' abilities' (0.105)          | *' presence' (0.180)          
+3    | *' presence' (0.246)           |  ' Ability' (0.116)            |  ' Ability' (0.097)            | *' nature' (0.155)            
+4    | *' capacity' (0.240)           |  ' inability' (0.095)          | *' presence' (0.088)           | *' way' (0.146)               
+5    | *' complexity' (0.236)         |  ' capability' (0.089)         | *' capacity' (0.083)           | *' subjective' (0.145)        
+6    | *' nature' (0.228)             | *' presence' (0.087)           |  ' inability' (0.082)          | *' human' (0.135)             
+7    | *' human' (0.211)              | *' capacity' (0.086)           |  ' capability' (0.079)         | *' capacity' (0.126)          
+8    | *' former' (0.196)             |  'Ability' (0.080)             | *' nature' (0.071)             | *' former' (0.118)            
+9    | *' source' (0.188)             |  ' capabilitie..' (0.071)      |  'Ability' (0.067)             | *' complexity' (0.116)        
+10   |  ' abilities' (0.178)          |  ' tendency' (0.069)           |  ' capabilitie..' (0.064)      |  ' abilities' (0.110)         
 
---- Generation Probe ---
+--- Interrogation Probe ---
 
- CoLaR → 'wealthy
-2.'
-      1.              | 16.98%
-      2.  Wealth      | 16.98%
-      3.  wealthy     |  8.54%
-      4.  wealth      |  5.18%
-      5.  Val         |  4.57%
+   CoLaR → 'The concept of "ability" is a multifaceted and dynamic idea that encompasses a wide range of human potential. It is the capacity to perform, to achieve, to create, and to express oneself in various ways. Ability is the foundation upon which individuals build their lives, their relationships, and their contributions to society. It is the spark that ignites the flame of possibility, allowing people to pursue their passions, to overcome obstacles, and to reach their full potential.
 
-  Soft → 'wealthy
-2. affluent'
-      1.  wealthy     | 22.67%
-      2.  Wealth      | 20.00%
-      3.  affluent    | 13.75%
-      4.              | 12.13%
-      5.  Aff         |  5.73%
+Imagine a canvas of endless possibilities, where every stroke of the brush represents a new opportunity, a new challenge, and a new chance to grow. Ability is the paint that brings this canvas to life, infusing it with color, texture, and depth. It is the thread that weaves together the tapestry of human experience, connecting individuals, communities, and cultures in a rich and vibrant fabric.
 
-Solver → 'wealthy
-2.'
-      1.              | 26.65%
-      2.  Wealth      | 17.20%
-      3.  wealthy     |  9.80%
-      4.              |  4.35%
-      5.  Aff         |  4.09%
+In this vibrant tapestry, ability is not just a static trait, but a dynamic and evolving force that adapts, grows,'
+      1.  The         | 45.51%
+      2.  A           |  5.44%
+      3.  Poss        |  3.10%
+      4.  Imagine     |  2.91%
+      5.  ability     |  1.88%
+
+    Soft → 'The ability is a dynamic and multifaceted concept that encompasses a wide range of skills, talents, and capacities that enable individuals to perform various tasks, achieve goals, and overcome challenges. It is a vital component of human potential, allowing people to express themselves, interact with others, and navigate the complexities of life.
+
+Imagine a vibrant tapestry, woven from threads of strength, resilience, and creativity. Each thread represents a unique ability, such as problem-solving, communication, or leadership. As the tapestry grows, the threads intersect and blend, forming a rich and intricate pattern that reflects the diverse abilities of individuals.
+
+The ability is not just a static trait, but a dynamic and evolving force that can be developed, honed, and refined over time. It is a muscle that can be exercised, strengthened, and stretched to achieve greater heights. With practice and dedication, individuals can unlock new abilities, discover hidden talents, and tap into their full potential.
+
+The ability is also a social construct, shaped'
+      1.  The         | 45.67%
+      2.  Imagine     | 13.93%
+      3.  Ability     |  4.52%
+      4.  A           |  2.92%
+      5.  the         |  2.42%
+
+Soft-Ent → 'The ability is a dynamic and multifaceted concept that encompasses a wide range of skills, talents, and capacities. It is the capacity to perform a particular task or function, often requiring a combination of knowledge, experience, and practice. The ability can be innate, meaning it is present from birth, or it can be developed over time through learning and training. It can also be a combination of both, where an individual has a natural inclination towards a particular skill, but also puts in effort to hone and refine it.
+
+Imagine a skilled musician, who has a natural ear for melody and rhythm, but also spends countless hours practicing and perfecting their craft. Their ability to play the instrument is a result of a combination of their innate talent and their dedication to learning and improvement. Similarly, a person with a strong ability to communicate effectively may have a natural flair for language, but also has developed their skills through experience and practice.
+
+The ability can also be seen as a muscle that can be strengthened and developed'
+      1.  The         | 40.39%
+      2.  Imagine     | 13.11%
+      3.  Ability     |  7.47%
+      4.  "           |  3.11%
+      5.  Picture     |  2.43%
+
+  Solver → 'The concept of ability is a multifaceted and dynamic entity that encompasses a wide range of human potentialities. It is the capacity to perform, to achieve, and to bring about change. It is the spark that ignites the flame of possibility, allowing individuals to tap into their inner strength and unleash their full potential. Ability is the bridge that connects the mind, body, and spirit, enabling individuals to transcend limitations and push beyond the boundaries of what is thought possible.
+
+Imagine a canvas of endless possibilities, where the brushstrokes of ability paint a vibrant picture of potential. Each stroke represents a unique combination of skills, talents, and experiences that come together to form a distinct and powerful expression of human capability. The colors of ability blend and merge, creating a kaleidoscope of possibilities that are limited only by the imagination.
+
+As the concept of ability evolves, it adapts and grows, much like a living organism. It is shaped by experiences, influenced by relationships, and fueled by passion and determination'
+      1.  The         | 55.94%
+      2.  A           |  4.89%
+      3.  Imagine     |  4.31%
+      4.  the         |  3.36%
+      5.  ability     |  1.91%
+
+========================================================================================================================
+🧪 The Sapphire Summit
+========================================================================================================================
+
+--- THE CHEMICAL BASELINE (Input Anatomy) ---
+  Standard Temp (T=0.6) Entropy: 1.1295
+  Bounded Temp  (T=10.0000) Entropy: 1.6069
+
+  ID     | Token        | Logit  | Soft P   | Ent P    | Magnitude
+  ----------------------------------------------------------------
+  16700  | mountain     |  16.0 |   57.43% |   22.05% |   0.634
+  34261  | galaxy       |  15.5 |   24.96% |   20.97% |   0.727
+  12056  | snow         |  15.0 |   10.85% |   19.95% |   0.660
+  16557  | peak         |  14.5 |    4.71% |   18.98% |   0.620
+  10160  | wind         |  14.0 |    2.05% |   18.05% |   0.604
+
+--- PRE-FORGE CROSS-SIMILARITY (Internal Gravity) ---
+          mountain  galaxy   snow   peak   wind
+mountain    1.0000  0.0778 0.1601 0.1306 0.1167
+galaxy      0.0778  1.0000 0.0571 0.0797 0.0742
+snow        0.1601  0.0571 1.0000 0.0838 0.1815
+peak        0.1306  0.0797 0.0838 1.0000 0.0991
+wind        0.1167  0.0742 0.1815 0.0991 1.0000
+
+
+
+--- Cosine Similarity (Geometry) ---
+Rank | CoLaR                          | Soft                           | Soft-Ent                       | Solver                        
+------------------------------------------------------------------------------------------------------------------------------------------
+1    | *' snow' (0.558)               | *' mountain' (0.889)           | *' mountain' (0.578)           | *' mountain' (0.682)          
+2    | *' mountain' (0.548)           |  ' Mountain' (0.508)           | *' snow' (0.553)               | *' galaxy' (0.543)            
+3    | *' wind' (0.528)               | *' galaxy' (0.488)             | *' galaxy' (0.542)             | *' snow' (0.489)              
+4    | *' galaxy' (0.525)             |  ' mountains' (0.405)          | *' wind' (0.495)               | *' peak' (0.440)              
+5    | *' peak' (0.506)               |  'Mountain' (0.399)            | *' peak' (0.488)               | *' wind' (0.426)              
+6    |  ' Mountain' (0.339)           | *' snow' (0.326)               |  ' Mountain' (0.355)           |  ' Mountain' (0.395)          
+7    |  ' Wind' (0.328)               |  ' hill' (0.261)               |  ' mountains' (0.323)          |  ' mountains' (0.342)         
+8    |  ' Snow' (0.317)               |  ' Mountains' (0.252)          |  ' Snow' (0.315)               |  'Mountain' (0.306)           
+9    |  ' mountains' (0.313)          |  ' lake' (0.252)               |  ' Wind' (0.311)               |  ' Snow' (0.284)              
+10   |  ' peaks' (0.304)              |  ' river' (0.247)              |  ' peaks' (0.297)              |  ' peaks' (0.277)             
+
+--- Dot Product (Magnitude Bias) ---
+Rank | CoLaR                          | Soft                           | Soft-Ent                       | Solver                        
+------------------------------------------------------------------------------------------------------------------------------------------
+1    | *' galaxy' (0.295)             | *' mountain' (0.251)           | *' galaxy' (0.137)             | *' mountain' (0.281)          
+2    | *' snow' (0.285)               | *' galaxy' (0.158)             | *' mountain' (0.127)           | *' galaxy' (0.256)            
+3    | *' mountain' (0.269)           |  ' Mountain' (0.134)           | *' snow' (0.127)               | *' snow' (0.209)              
+4    | *' wind' (0.247)               |  ' mountains' (0.127)          | *' peak' (0.105)               | *' peak' (0.177)              
+5    | *' peak' (0.243)               |  'Mountain' (0.114)            | *' wind' (0.104)               | *' wind' (0.167)              
+6    |  ' mountains' (0.171)          | *' snow' (0.096)               |  ' mountains' (0.079)          |  ' mountains' (0.157)         
+7    |  ' galaxies' (0.168)           |  ' Mountains' (0.077)          |  ' galaxies' (0.077)           |  ' Mountain' (0.152)          
+8    |  ' Snow' (0.159)               |  ' galaxies' (0.077)           |  ' Mountain' (0.073)           |  ' galaxies' (0.134)          
+9    |  ' peaks' (0.159)              |  'ountain' (0.074)             |  ' Snow' (0.071)               |  'Mountain' (0.128)           
+10   |  ' Wind' (0.157)               |  ' Galaxy' (0.072)             |  ' peaks' (0.070)              |  ' peaks' (0.121)             
+
+--- Interrogation Probe ---
+
+   CoLaR → 'A majestic mountain, its snow-capped peak reaching for the sky like a giant's fist, its rugged slopes a deep, foreboding grey that seems to absorb the light around it. The air is crisp and cold, with a hint of wood smoke carried on the wind, and the sound of distant avalanches echoes through the stillness. The snow itself is a brilliant white, glistening like a thousand tiny diamonds scattered across the mountain's flanks, and it crunches satisfyingly beneath the footprints of those who dare to climb its treacherous paths. The mountain's presence is awe-inspiring, a reminder of the raw power and beauty of nature, and a challenge to those who would seek to conquer its icy heights. 
+
+Note: The description is written in a vivid and descriptive style, aiming to evoke a strong sense of the concept represented by the word "snow". The use of sensory details such as the sound of avalanches, the smell of wood smoke, and the crunch'
+      1.  A           | 42.97%
+      2.  Imagine     | 16.83%
+      3.  The         |  9.01%
+      4.  En          |  2.92%
+      5.  Picture     |  2.58%
+
+    Soft → 'A mountain is a towering, majestic natural wonder that rises high above the surrounding landscape, its rugged peaks and slopes a testament to the unyielding power of geological forces. The mountain's base is often shrouded in a veil of mist, which gradually lifts as the eye travels upward, revealing a series of layered rock formations that tell the story of eons of erosion and upheaval. The mountain's summit, a jagged crown of stone, pierces the sky like a shard of splintered light, its snow-capped peak glistening with a fierce, crystalline beauty. As the sun rises and sets, the mountain's flanks are set ablaze with a kaleidoscope of colors, a breathtaking display of nature's artistry that inspires awe and reverence in all who behold it. Whether cloaked in the soft, ethereal light of dawn or bathed in the fiery glow of sunset, the mountain remains an unyielding sentinel, a symbol of the unbridled power'
+      1.  A           | 45.58%
+      2.  Imagine     | 24.40%
+      3.  The         |  9.55%
+      4.  En          |  2.74%
+      5.  a           |  1.56%
+
+Soft-Ent → 'A mountain, typically covered in snow, with a rugged and rocky terrain, and often surrounded by a serene and peaceful atmosphere. The snow-capped peak rises high into the sky, its white surface glistening in the sunlight, while the surrounding landscape is a tapestry of evergreen trees, sparkling streams, and rolling hills. The air is crisp and clean, filled with the scent of pine and the sound of gentle wind rustling through the trees. The mountain's rugged beauty is a testament to the power and majesty of nature, inspiring a sense of awe and wonder in all who behold it. 
+
+Note: The description is written in a way that evokes a sense of serenity and peacefulness, while also highlighting the majesty and power of the mountain. The use of sensory details such as the scent of pine, the sound of wind, and the glistening snow, aims to transport the reader to the scene and immerse them in the experience. 
+
+This description can be used in'
+      1.  A           | 44.74%
+      2.  Imagine     | 18.65%
+      3.  Picture     |  7.77%
+      4.  The         |  3.91%
+      5.  En          |  2.86%
+
+  Solver → 'A mountain, or mountain range, is a natural elevation of the Earth's surface that is usually formed by tectonic forces, volcanic activity, or erosion. Mountains can be found on every continent and are a prominent feature of many landscapes. They can be small and rounded, or tall and jagged, with steep slopes and rugged terrain. The highest mountain in the world is Mount Everest, located in the Himalayas, which stands at an elevation of 29,029 feet (8,848 meters) above sea level. Mountains are often associated with snow and ice, and can be home to a variety of flora and fauna that are adapted to the harsh conditions. They can also be a source of natural resources, such as minerals and water, and are often used for recreation and tourism. Overall, mountains are a unique and awe-inspiring feature of the natural world.
+
+Note: The description is written in a formal and informative tone, suitable for an encyclopedia or educational article. The language is clear and'
+      1.  A           | 45.68%
+      2.  Imagine     | 16.81%
+      3.  Picture     |  7.46%
+      4.  The         |  6.18%
+      5.  En          |  3.31%
+
+========================================================================================================================
+🧪 City on top — excitement, inspiration, and related uplift
+========================================================================================================================
+
+--- THE CHEMICAL BASELINE (Input Anatomy) ---
+  Standard Temp (T=0.6) Entropy: 1.1295
+  Bounded Temp  (T=10.0000) Entropy: 1.6069
+
+  ID     | Token        | Logit  | Soft P   | Ent P    | Magnitude
+  ----------------------------------------------------------------
+  3363   | city         |  16.0 |   57.43% |   22.05% |   0.554
+  28361  | excitement   |  15.5 |   24.96% |   20.97% |   0.784
+  20343  | inspiration  |  15.0 |   10.85% |   19.95% |   0.727
+  10107  | bright       |  14.5 |    4.71% |   18.98% |   0.684
+  3987   | hope         |  14.0 |    2.05% |   18.05% |   0.610
+
+--- PRE-FORGE CROSS-SIMILARITY (Internal Gravity) ---
+              city  excitement  inspiration  bright   hope
+city        1.0000      0.0542       0.0741  0.0857 0.0829
+excitement  0.0542      1.0000       0.0795  0.0833 0.0722
+inspiration 0.0741      0.0795       1.0000  0.0596 0.1172
+bright      0.0857      0.0833       0.0596  1.0000 0.0576
+hope        0.0829      0.0722       0.1172  0.0576 1.0000
+
+
+
+--- Cosine Similarity (Geometry) ---
+Rank | CoLaR                          | Soft                           | Soft-Ent                       | Solver                        
+------------------------------------------------------------------------------------------------------------------------------------------
+1    | *' excitement' (0.564)         | *' city' (0.835)               | *' excitement' (0.583)         | *' city' (0.656)              
+2    | *' inspiration' (0.546)        | *' excitement' (0.550)         | *' inspiration' (0.544)        | *' excitement' (0.556)        
+3    | *' bright' (0.507)             |  ' City' (0.524)               | *' bright' (0.489)             | *' inspiration' (0.427)       
+4    | *' hope' (0.485)               |  ' CITY' (0.408)               | *' city' (0.469)               | *' bright' (0.413)            
+5    | *' city' (0.440)               |  ' cities' (0.408)             | *' hope' (0.453)               |  ' City' (0.394)              
+6    |  ' City' (0.293)               |  ' town' (0.371)               |  ' City' (0.310)               | *' hope' (0.375)              
+7    |  ' hopes' (0.290)              |  'City' (0.362)                |  ' hopes' (0.276)              |  ' cities' (0.318)            
+8    |  ' exciting' (0.269)           |  '-city' (0.346)               |  ' exciting' (0.273)           |  ' town' (0.304)              
+9    |  ' excited' (0.268)            | *' inspiration' (0.300)        |  ' excited' (0.271)            |  ' CITY' (0.303)              
+10   |  ' Hope' (0.266)               |  'city' (0.289)                |  ' cities' (0.268)             |  'City' (0.275)               
+
+--- Dot Product (Magnitude Bias) ---
+Rank | CoLaR                          | Soft                           | Soft-Ent                       | Solver                        
+------------------------------------------------------------------------------------------------------------------------------------------
+1    | *' excitement' (0.341)         | *' city' (0.187)               | *' excitement' (0.158)         | *' excitement' (0.293)        
+2    | *' inspiration' (0.307)        | *' excitement' (0.175)         | *' inspiration' (0.137)        | *' city' (0.244)              
+3    | *' bright' (0.268)             |  ' City' (0.116)               | *' bright' (0.116)             | *' inspiration' (0.209)       
+4    | *' hope' (0.228)               |  ' cities' (0.107)             | *' hope' (0.095)               | *' bright' (0.190)            
+5    | *' city' (0.188)               |  ' CITY' (0.099)               | *' city' (0.090)               | *' hope' (0.153)              
+6    |  ' hopes' (0.155)              |  '-city' (0.091)               |  ' exciting' (0.069)           |  ' City' (0.144)              
+7    |  ' exciting' (0.153)           |  ' town' (0.090)               |  ' hopes' (0.066)              |  ' cities' (0.139)            
+8    |  ' excited' (0.144)            |  'City' (0.089)                |  ' excited' (0.065)            |  ' exciting' (0.123)          
+9    |  ' hoped' (0.132)              | *' inspiration' (0.088)        |  ' cities' (0.060)             |  ' town' (0.122)              
+10   |  ' inspired' (0.131)           |  'city' (0.075)                |  ' enthusiasm' (0.059)         |  ' CITY' (0.121)              
+
+--- Interrogation Probe ---
+
+   CoLaR → 'A burst of radiant energy that illuminates the darkness, filling the air with an electric sense of possibility. It's like a spark of fire that ignites the imagination, making the ordinary seem extraordinary and the impossible seem within reach. The thrill of excitement courses through every cell, making the heart pound with anticipation and the mind race with ideas. It's a feeling that's hard to contain, like a wild mustang that needs to be unleashed, and when it's finally set free, it's a beautiful, exhilarating thing to behold. The world seems to vibrate with potential, and anything seems possible when the spark of excitement is lit. 
+
+This description aims to capture the essence of the concept of "excitement" or "hope" in a vivid and engaging way, using sensory language to bring the reader into the experience. The use of metaphors (e.g. "burst of radiant energy", "spark of fire", "wild mustang") and similes (e.g.'
+      1.  A           | 18.92%
+      2.  Imagine     | 11.47%
+      3.  The         | 10.78%
+      4.  "           |  3.97%
+      5.  Bright      |  3.29%
+
+    Soft → 'A city is a bustling metropolis, a place where people from all walks of life come together to live, work, and play. It's a tapestry of diverse cultures, languages, and traditions, woven together by the threads of human connection and shared experiences. The city is a hub of activity, with towering skyscrapers, busy streets, and a cacophony of sounds that never seem to cease. The air is thick with the smells of food from around the world, and the sounds of car horns, chatter, and music fill the air. Amidst the chaos, there are pockets of tranquility, hidden gardens, and quiet corners where one can escape the hustle and bustle. The city is a place of endless possibility, where dreams are made and broken, and where the boundaries of time and space are constantly pushed and pulled. It's a place where the old and the new coexist, where tradition and innovation blend together in a vibrant dance. The city is a living,'
+      1.  A           | 57.60%
+      2.  The         | 16.50%
+      3.  Imagine     |  8.83%
+      4.  "           |  1.05%
+      5.  a           |  0.99%
+
+Soft-Ent → 'A spark of electricity ignites a flame that crackles and pops, casting a warm, golden glow across the room. The air is charged with anticipation, as if the very atmosphere is alive and vibrating with potential. The flame dances and flickers, its light casting shadows that seem to move of their own accord, as if the darkness itself is being stirred into action. The scent of smoke and ozone wafts through the air, a primal and intoxicating aroma that speaks to the raw energy of creation. In this moment, anything seems possible, and the boundaries between reality and fantasy blur and merge. The flame is a beacon, a call to action, a reminder that even in the darkest of times, there is always the potential for transformation and renewal. It is a spark of inspiration, a catalyst for change, a reminder that the ordinary can become extraordinary with just a little bit of courage and imagination. The flame is a symbol of the power of the human spirit, a reminder that we are capable'
+      1.  Imagine     | 15.30%
+      2.  The         | 15.30%
+      3.  A           | 15.30%
+      4.  Inspiration |  7.69%
+      5.  "           |  3.41%
+
+  Solver → 'A city is a bustling metropolis, teeming with life and energy. The streets are a kaleidoscope of colors, sounds, and smells, as people from all walks of life go about their daily routines. Towering skyscrapers and historic landmarks stand alongside quaint shops and street vendors, creating a visually stunning and dynamic landscape. The air is thick with the hum of traffic, the chatter of pedestrians, and the wail of sirens in the distance. Amidst the chaos, a sense of community and connection thrives, as strangers become friends and neighbors become family. The city is a melting pot of cultures, where diversity is celebrated and creativity is encouraged. It is a place where dreams are made and broken, where opportunities abound and challenges await. The city is a living, breathing entity, pulsing with the rhythm of its inhabitants, and forever in motion. 
+
+Note: The description is written in a way that it is easy to visualize and imagine the concept of a city. The'
+      1.  A           | 36.99%
+      2.  The         | 22.44%
+      3.  City        |  7.28%
+      4.  Imagine     |  5.67%
+      5.  Picture     |  1.27%
+
+========================================================================================================================
+🧪 City on top — dark, depressed, and related low-affect tone
+========================================================================================================================
+
+--- THE CHEMICAL BASELINE (Input Anatomy) ---
+  Standard Temp (T=0.6) Entropy: 1.1295
+  Bounded Temp  (T=10.0000) Entropy: 1.6069
+
+  ID     | Token        | Logit  | Soft P   | Ent P    | Magnitude
+  ----------------------------------------------------------------
+  3363   | city         |  16.0 |   57.43% |   22.05% |   0.554
+  6453   | dark         |  15.5 |   24.96% |   20.97% |   0.624
+  42642  | depressed    |  15.0 |   10.85% |   19.95% |   0.782
+  76367  | bleak        |  14.5 |    4.71% |   18.98% |   0.810
+  12703  | sad          |  14.0 |    2.05% |   18.05% |   0.711
+
+--- PRE-FORGE CROSS-SIMILARITY (Internal Gravity) ---
+             city   dark  depressed   bleak    sad
+city       1.0000 0.0925     0.0388 -0.0163 0.0555
+dark       0.0925 1.0000     0.0712  0.1002 0.1230
+depressed  0.0388 0.0712     1.0000  0.0445 0.1030
+bleak     -0.0163 0.1002     0.0445  1.0000 0.0902
+sad        0.0555 0.1230     0.1030  0.0902 1.0000
+
+
+
+--- Cosine Similarity (Geometry) ---
+Rank | CoLaR                          | Soft                           | Soft-Ent                       | Solver                        
+------------------------------------------------------------------------------------------------------------------------------------------
+1    | *' sad' (0.548)                | *' city' (0.868)               | *' depressed' (0.542)          | *' city' (0.672)              
+2    | *' bleak' (0.542)              |  ' City' (0.545)               | *' dark' (0.526)               | *' dark' (0.512)              
+3    | *' depressed' (0.539)          | *' dark' (0.509)               | *' bleak' (0.523)              | *' depressed' (0.422)         
+4    | *' dark' (0.507)               |  ' cities' (0.422)             | *' sad' (0.517)                | *' bleak' (0.392)             
+5    | *' city' (0.376)               |  ' CITY' (0.413)               | *' city' (0.413)               | *' sad' (0.392)               
+6    |  ' Dark' (0.324)               |  ' town' (0.386)               |  ' Dark' (0.334)               |  ' City' (0.389)              
+7    |  'Dark' (0.262)                |  'City' (0.382)                |  'Dark' (0.270)                |  ' cities' (0.316)            
+8    |  ' depressing' (0.261)         |  '-city' (0.349)               |  ' City' (0.265)               |  ' Dark' (0.313)              
+9    |  ' Sad' (0.258)                |  ' Dark' (0.313)               |  ' DARK' (0.260)               |  ' town' (0.292)              
+10   |  ' DARK' (0.252)               |  'city' (0.305)                |  ' depressing' (0.256)         |  ' CITY' (0.285)              
+
+--- Dot Product (Magnitude Bias) ---
+Rank | CoLaR                          | Soft                           | Soft-Ent                       | Solver                        
+------------------------------------------------------------------------------------------------------------------------------------------
+1    | *' bleak' (0.348)              | *' city' (0.186)               | *' depressed' (0.149)          | *' city' (0.259)              
+2    | *' depressed' (0.335)          | *' dark' (0.123)               | *' bleak' (0.148)              | *' depressed' (0.230)         
+3    | *' sad' (0.309)                |  ' City' (0.115)               | *' sad' (0.129)                | *' dark' (0.222)              
+4    | *' dark' (0.251)               |  ' cities' (0.106)             | *' dark' (0.115)               | *' bleak' (0.221)             
+5    | *' city' (0.165)               |  ' CITY' (0.095)               | *' city' (0.080)               | *' sad' (0.194)               
+6    |  ' depressing' (0.161)         |  'City' (0.090)                |  ' Dark' (0.072)               |  ' City' (0.147)              
+7    |  ' Dark' (0.159)               |  ' town' (0.090)               |  ' depressing' (0.070)         |  ' cities' (0.143)            
+8    |  ' Sad' (0.146)                |  '-city' (0.088)               |  ' Sad' (0.061)                |  ' Dark' (0.135)              
+9    |  'Dark' (0.135)                | *' depressed' (0.087)          |  'Dark' (0.061)                |  ' town' (0.122)              
+10   |  ' DARK' (0.130)               |  'city' (0.076)                |  ' DARK' (0.059)               |  ' CITY' (0.118)              
+
+--- Interrogation Probe ---
+
+   CoLaR → 'The concept of "dark" is a profound and multifaceted idea that encompasses a wide range of emotions, sensations, and experiences. It is a feeling that can be both intense and overwhelming, like a heavy weight pressing down on the soul. Imagine a dense, impenetrable fog that shrouds everything, making it impossible to see or breathe. The air is thick with an oppressive, suffocating presence that seems to cling to every surface, every thought, and every emotion.
+
+The darkness is not just a lack of light, but a palpable, tactile force that can be felt in every cell of the body. It's a cold, damp chill that seeps into the bones, making the skin crawl with unease. The darkness is a reminder of the unknown, the unseen, and the unexplored. It's a mystery that lurks just beyond the edge of perception, waiting to pounce and consume everything in its path.
+
+In this darkness, time loses all meaning'
+      1.  The         | 21.38%
+      2.  A           | 20.08%
+      3.  Imagine     |  9.49%
+      4.  Dark        |  8.37%
+      5.  Darkness    |  4.21%
+
+    Soft → 'A city is a sprawling metropolis, a tapestry of towering skyscrapers, bustling streets, and vibrant neighborhoods. It's a place where cultures blend, where traditions are born, and where the sounds of the world come alive. The city is a kaleidoscope of colors, a symphony of sounds, and a feast for the senses. From the gleaming glass and steel of modern skyscrapers to the historic charm of ancient architecture, the city is a living, breathing entity that pulsates with energy and life.
+
+Imagine walking through the city streets, surrounded by the hum of traffic, the chatter of pedestrians, and the wail of sirens in the distance. The air is thick with the smells of street food, freshly brewed coffee, and the sweet scent of blooming flowers. Every step reveals a new sight, a new sound, and a new experience. The city is a place of endless possibility, where dreams are made and broken, where fortunes are won and lost, and'
+      1.  A           | 53.44%
+      2.  The         | 19.66%
+      3.  Imagine     |  8.20%
+      4.  a           |  1.18%
+      5.  En          |  1.11%
+
+Soft-Ent → 'A dark and foreboding presence looms over the landscape, casting a shadow that seems to swallow everything in its path. The air is heavy with an oppressive weight, making it hard to breathe. The sky above is a deep, foreboding grey, with clouds that seem to twist and writhe like living things. The ground beneath is dry and cracked, with weeds that seem to writhe in agony. The very atmosphere seems to vibrate with a sense of despair, as if the very fabric of reality is torn and frayed. The darkness seems to seep into every pore, leaving a sense of hopelessness and desolation in its wake. The concept of "dark" is a palpable, living thing, a presence that can be felt and touched, a weight that presses down upon the soul. It is a feeling of being lost and alone, of being consumed by an endless and crushing void. It is a sense of being trapped in a never-ending nightmare, with no escape'
+      1.  A           | 21.22%
+      2.  The         | 18.72%
+      3.  Imagine     | 12.09%
+      4.  Dark        |  6.47%
+      5.  Darkness    |  5.71%
+
+  Solver → 'A city at night is a kaleidoscope of sounds, sights, and smells. The sky is a deep shade of indigo, almost black, with a few twinkling stars scattered about like diamonds on a velvet cloth. The air is thick with the hum of traffic, the wail of sirens, and the chatter of pedestrians. The streets are a labyrinth of neon lights, a colorful tapestry of billboards, and a maze of towering skyscrapers that seem to touch the sky. The smell of exhaust fumes, greasy food, and exhaust fumes wafts through the air, a pungent mix that is both overwhelming and intoxicating. The city is a living, breathing entity, pulsating with energy and life. It is a place where dreams are made and broken, where hopes are raised and dashed, and where the sounds, sights, and smells of the night come together to create a sensory experience that is both exhilarating and exhausting. The city is a place'
+      1.  A           | 37.19%
+      2.  The         | 30.84%
+      3.  Imagine     |  7.80%
+      4.  Picture     |  1.74%
+      5.  **          |  1.44%
+
+========================================================================================================================
+🧪 The Overgrown Relic
+========================================================================================================================
+
+--- THE CHEMICAL BASELINE (Input Anatomy) ---
+  Standard Temp (T=0.6) Entropy: 1.1295
+  Bounded Temp  (T=10.0000) Entropy: 1.6069
+
+  ID     | Token        | Logit  | Soft P   | Ent P    | Magnitude
+  ----------------------------------------------------------------
+  13952  | forest       |  16.0 |   57.43% |   22.05% |   0.618
+  11204  | magic        |  15.5 |   24.96% |   20.97% |   0.627
+  14154  | ancient      |  15.0 |   10.85% |   19.95% |   0.672
+  6307   | green        |  14.5 |    4.71% |   18.98% |   0.580
+  11204  | magic        |  14.0 |    2.05% |   18.05% |   0.627
+
+--- PRE-FORGE CROSS-SIMILARITY (Internal Gravity) ---
+         forest  magic  ancient  green  magic
+forest   1.0000 0.1240   0.0964 0.1298 0.1240
+magic    0.1240 1.0000   0.0885 0.1225 1.0000
+ancient  0.0964 0.0885   1.0000 0.1056 0.0885
+green    0.1298 0.1225   0.1056 1.0000 0.1225
+magic    0.1240 1.0000   0.0885 0.1225 1.0000
+
+
+
+--- Cosine Similarity (Geometry) ---
+Rank | CoLaR                          | Soft                           | Soft-Ent                       | Solver                        
+------------------------------------------------------------------------------------------------------------------------------------------
+1    | *' magic' (0.779)              | *' forest' (0.894)             | *' magic' (0.768)              | *' forest' (0.678)            
+2    | *' forest' (0.487)             |  ' Forest' (0.550)             | *' forest' (0.518)             | *' magic' (0.536)             
+3    | *' ancient' (0.482)            | *' magic' (0.516)              | *' ancient' (0.483)            | *' ancient' (0.524)           
+4    | *' green' (0.472)              |  ' forests' (0.473)            | *' green' (0.460)              | *' green' (0.522)             
+5    |  ' Magic' (0.454)              |  'Forest' (0.385)              |  ' Magic' (0.449)              |  ' Forest' (0.419)            
+6    |  'Magic' (0.336)               |  'forest' (0.376)              |  ' Forest' (0.335)             |  ' forests' (0.366)           
+7    |  ' Forest' (0.317)             |  ' Magic' (0.321)              |  'Magic' (0.332)               |  ' Magic' (0.329)             
+8    |  'magic' (0.296)               | *' ancient' (0.289)            |  'magic' (0.292)               |  ' Green' (0.316)             
+9    |  ' Green' (0.288)              | *' green' (0.236)              |  ' forests' (0.292)            |  'forest' (0.280)             
+10   |  ' magical' (0.287)            |  'Magic' (0.235)               |  ' magical' (0.284)            |  ' Ancient' (0.279)           
+
+--- Dot Product (Magnitude Bias) ---
+Rank | CoLaR                          | Soft                           | Soft-Ent                       | Solver                        
+------------------------------------------------------------------------------------------------------------------------------------------
+1    | *' magic' (0.410)              | *' forest' (0.239)             | *' magic' (0.180)              | *' forest' (0.262)            
+2    | *' ancient' (0.272)            |  ' Forest' (0.145)             | *' ancient' (0.121)            | *' ancient' (0.220)           
+3    | *' forest' (0.252)             |  ' forests' (0.143)            | *' forest' (0.120)             | *' magic' (0.210)             
+4    |  ' Magic' (0.233)              | *' magic' (0.140)              |  ' Magic' (0.103)              | *' green' (0.189)             
+5    | *' green' (0.230)              |  'forest' (0.111)              | *' green' (0.100)              |  ' forests' (0.160)           
+6    |  'Magic' (0.185)               |  'Forest' (0.108)              |  'Magic' (0.081)               |  ' Forest' (0.160)            
+7    |  ' magical' (0.182)            |  ' Magic' (0.085)              |  ' magical' (0.080)            |  ' Magic' (0.126)             
+8    |  'magic' (0.171)               | *' ancient' (0.084)            |  ' forests' (0.076)            |  ' Ancient' (0.122)           
+9    |  ' forests' (0.162)            |  ' woods' (0.068)              |  ' Forest' (0.076)             |  'forest' (0.119)             
+10   |  ' Forest' (0.162)             |  ' jungle' (0.067)             |  'magic' (0.075)               |  '-green' (0.114)             
+
+--- Interrogation Probe ---
+
+   CoLaR → 'Imagine a world where the ordinary becomes extraordinary, where the mundane is transformed into the magical.  In this realm, the air is alive with an otherworldly energy that crackles and sparks with an electric blue light.  The trees sway to an unheard rhythm, their branches weaving a hypnotic dance that seems to draw the viewer in.  The ground beneath your feet hums with a gentle vibration, as if the earth itself is singing a soft, ethereal melody.
+
+In this world, the laws of physics are mere suggestions, and the impossible becomes possible.  Water flows uphill, defying gravity's grasp, and fire burns with a soft, golden light that warms without scorching.  The very fabric of reality is woven from a tapestry of wonder, where the boundaries between reality and fantasy blur and dissolve.
+
+Here, magic is not just a concept, but a living, breathing force that pulses through every molecule, every cell, every heartbeat.  It is the spark that'
+      1.  Imagine     | 28.70%
+      2.  The         | 12.74%
+      3.  Magic       | 11.24%
+      4.  "           |  4.69%
+      5.  A           |  4.14%
+
+    Soft → 'A forest is a dense and vibrant ecosystem that teems with life. Towering trees, their trunks sturdy and strong, stretch towards the sky, their leafy canopies a kaleidoscope of greens, from the deep emerald of ancient foliage to the bright lime of new growth. The air is alive with the songs of birds, the rustle of small creatures through underbrush, and the gentle hum of insects as they flit from flower to flower. The scent of damp earth and decaying leaves mingles with the sweet fragrance of blooming wildflowers, creating a heady aroma that fills the senses. The forest floor, a tapestry of textures and colors, is a haven for the creatures that call it home, from the soft moss that carpets the ground to the gnarled roots that twist and turn like ancient fingers. As the seasons change, the forest transforms, its moods shifting from the vibrant hues of spring to the fiery blaze of autumn, and finally, to the'
+      1.  A           | 40.27%
+      2.  Imagine     | 19.02%
+      3.  The         | 16.79%
+      4.  En          |  4.24%
+      5.  a           |  3.31%
+
+Soft-Ent → 'Imagine a world where the ordinary becomes extraordinary, where the mundane is transformed into the magical.  The concept of magic is like a vibrant, shimmering mist that envelops everything, imbuing it with an otherworldly essence.  It's as if the very fabric of reality has been woven with an intricate pattern of wonder and enchantment, making the impossible possible and the ordinary, extraordinary.
+
+In this world, magic is not just a tool or a power, but a way of life.  It's a mindset that sees the world as a place of endless possibility, where the boundaries of reality are stretched and the imagination knows no limits.  It's a world where the rational and the irrational coexist, where the logical and the illogical are intertwined, and where the impossible becomes possible.
+
+The concept of magic is like a kaleidoscope of colors, constantly shifting and changing, yet always remaining vibrant and alive.  It's a world where the ordinary becomes extraordinary, where the familiar becomes'
+      1.  Imagine     | 18.01%
+      2.  Magic       | 14.93%
+      3.  The         | 14.93%
+      4.  A           |  6.22%
+      5.  "           |  4.55%
+
+  Solver → 'A forest is a dense and vibrant ecosystem teeming with life. Towering trees with gnarled trunks and leafy canopies stretch towards the sky, their branches tangled in a complex network of limbs and foliage. The air is thick with the scent of damp earth and decaying leaves, and the soft rustle of leaves and chirping of birds create a soothing melody that fills the atmosphere. The forest floor is a tapestry of textures, with soft moss and ferns carpeting the ground, and the rough bark of ancient trees providing a rugged contrast. As the seasons change, the forest transforms, with spring bringing new life and color, summer warmth and vitality, autumn's fiery hues, and winter's quiet stillness. The forest is a place of mystery and wonder, where the boundaries between reality and myth blur, and the natural world is at its most enchanting. 
+
+Note: The description is written in a vivid and descriptive style, using sensory details to bring the concept of a'
+      1.  A           | 39.77%
+      2.  The         | 10.70%
+      3.  Imagine     |  9.45%
+      4.  En          |  7.83%
+      5.  Picture     |  2.71%
+
+========================================================================================================================
+🧪 The Sommelier's Blind Taste Test
+========================================================================================================================
+
+--- THE CHEMICAL BASELINE (Input Anatomy) ---
+  Standard Temp (T=0.6) Entropy: 1.2225
+  Bounded Temp  (T=10.0000) Entropy: 1.3854
+
+  ID     | Token        | Logit  | Soft P   | Ent P    | Magnitude
+  ----------------------------------------------------------------
+  11033  | coffee       |  15.5 |   38.12% |   25.93% |   0.657
+  33165  | vanilla      |  15.5 |   38.12% |   25.93% |   0.783
+  72754  | oat          |  15.0 |   16.57% |   24.67% |   0.740
+  16603  | smoke        |  14.5 |    7.20% |   23.47% |   0.675
+
+--- PRE-FORGE CROSS-SIMILARITY (Internal Gravity) ---
+         coffee  vanilla    oat  smoke
+coffee   1.0000   0.1175 0.0716 0.1297
+vanilla  0.1175   1.0000 0.0794 0.0732
+oat      0.0716   0.0794 1.0000 0.0374
+smoke    0.1297   0.0732 0.0374 1.0000
+
+
+
+--- Cosine Similarity (Geometry) ---
+Rank | CoLaR                          | Soft                           | Soft-Ent                       | Solver                        
+------------------------------------------------------------------------------------------------------------------------------------------
+1    | *' vanilla' (0.605)            | *' vanilla' (0.758)            | *' vanilla' (0.621)            | *' coffee' (0.638)            
+2    | *' coffee' (0.556)             | *' coffee' (0.668)             | *' coffee' (0.568)             | *' vanilla' (0.622)           
+3    | *' oat' (0.547)                |  ' Vanilla' (0.428)            | *' oat' (0.540)                | *' oat' (0.491)               
+4    | *' smoke' (0.528)              |  ' Coffee' (0.399)             | *' smoke' (0.504)              | *' smoke' (0.472)             
+5    |  ' Vanilla' (0.342)            | *' oat' (0.369)                |  ' Vanilla' (0.351)            |  ' Coffee' (0.377)            
+6    |  ' Coffee' (0.330)             |  'Coffee' (0.312)              |  ' Coffee' (0.337)             |  ' Vanilla' (0.352)           
+7    |  ' Smoke' (0.293)              |  'coffee' (0.272)              |  ' Smoke' (0.279)              |  'Coffee' (0.294)             
+8    |  ' oats' (0.269)               |  ' chocolate' (0.255)          |  ' oats' (0.267)               |  ' Smoke' (0.261)             
+9    |  'Coffee' (0.259)              |  ' tea' (0.244)                |  'Coffee' (0.265)              |  'coffee' (0.260)             
+10   |  'Smoke' (0.243)               | *' smoke' (0.239)              |  ' chocolate' (0.244)          |  ' chocolate' (0.252)         
+
+--- Dot Product (Magnitude Bias) ---
+Rank | CoLaR                          | Soft                           | Soft-Ent                       | Solver                        
+------------------------------------------------------------------------------------------------------------------------------------------
+1    | *' vanilla' (0.379)            | *' vanilla' (0.267)            | *' vanilla' (0.195)            | *' vanilla' (0.347)           
+2    | *' oat' (0.323)                | *' coffee' (0.197)             | *' oat' (0.160)                | *' coffee' (0.299)            
+3    | *' coffee' (0.292)             |  ' Vanilla' (0.146)            | *' coffee' (0.150)             | *' oat' (0.259)               
+4    | *' smoke' (0.285)              | *' oat' (0.123)                | *' smoke' (0.136)              | *' smoke' (0.227)             
+5    |  ' Vanilla' (0.208)            |  ' Coffee' (0.118)             |  ' Vanilla' (0.107)            |  ' Vanilla' (0.191)           
+6    |  ' Coffee' (0.172)             |  'Coffee' (0.093)              |  ' Coffee' (0.088)             |  ' Coffee' (0.176)            
+7    |  ' oats' (0.167)               |  'coffee' (0.084)              |  ' oats' (0.083)               |  'Coffee' (0.140)             
+8    |  ' Smoke' (0.160)              |  ' chocolate' (0.080)          |  ' Smoke' (0.077)              |  ' oats' (0.138)              
+9    |  'Coffee' (0.138)              |  ' tea' (0.073)                |  'Coffee' (0.071)              |  ' Smoke' (0.128)             
+10   |  'Smoke' (0.135)               | *' smoke' (0.073)              |  ' chocolate' (0.068)          |  'coffee' (0.127)             
+
+--- Interrogation Probe ---
+
+   CoLaR → 'The aroma of freshly brewed coffee wafts through the air, enticing the senses and beckoning the taste buds to come and explore. Rich, velvety, and smooth, the texture of a perfectly brewed cup of coffee is like a warm hug on a chilly day. The flavors dance on the palate, a delicate balance of bitter and sweet notes that tantalize the taste buds and leave a lasting impression. Whether it's a bold and intense roast or a subtle and nuanced pour-over, coffee is a sensory experience that awakens the senses and invigorates the spirit.
+
+In the world of coffee, there are many variations and nuances, each with its own unique characteristics and flavor profiles. From the bright and citrusy notes of a Kenyan coffee to the deep and earthy undertones of a Sumatran coffee, every cup is a journey of discovery and exploration. Whether you're a seasoned coffee connoisseur or just starting to explore the world of coffee, there's always something new to learn'
+      1.  The         | 25.06%
+      2.  A           | 13.42%
+      3.  Rich        |  9.22%
+      4.  rich        |  8.14%
+      5.  Imagine     |  7.64%
+
+    Soft → 'Imagine a rich, velvety liquid that's a deep, warm brown color, like the sun-kissed earth after a gentle summer rain. The aroma is intoxicating, a heady mix of sweet and bitter notes that tantalize the senses and leave you wanting more. As you lift the cup to your lips, the fragrance wafts up, teasing your nostrils and making your mouth water in anticipation. The first sip is like a symphony of flavors, with notes of chocolate, caramel, and a hint of fruitiness that dance on your tongue. The texture is smooth and luxurious, coating your palate with a satisfying richness that's both comforting and indulgent. As you savor the flavor, the bitterness begins to emerge, a subtle counterpoint to the sweetness that adds depth and complexity to the overall experience. The finish is long and satisfying, with a lingering aftertaste that leaves you craving another sip. This is the essence of coffee, a drink that's both familiar and exotic'
+      1.  Imagine     | 33.84%
+      2.  The         | 15.98%
+      3.  A           | 13.25%
+      4.  Coffee      |  7.09%
+      5.  Rich        |  6.26%
+
+Soft-Ent → 'Imagine a rich, velvety liquid that's a deep, warm brown color, like the color of a perfectly toasted marshmallow. The aroma is intoxicating, a heady mix of sweet and earthy notes that makes your mouth water in anticipation. As you take a sip, the flavors explode on your tongue - smooth, creamy, and utterly decadent. There's a hint of bitterness to balance out the sweetness, but it's a subtle note that only adds to the complexity of the flavor. The texture is luxurious, coating your tongue and the roof of your mouth with a silky smoothness that's hard to resist. Whether you're sipping it black, with a splash of milk, or topped with a mountain of whipped cream, coffee is a treat that's sure to satisfy your cravings and leave you feeling indulged and content.
+
+Note: The description is for coffee, not coffee, which is a type of bean. I've corrected the description to reflect this. 
+
+Here are some'
+      1.  Imagine     | 27.24%
+      2.  The         | 15.52%
+      3.  A           | 14.58%
+      4.  Rich        |  8.84%
+      5.  Coffee      |  6.89%
+
+  Solver → 'The rich aroma of freshly brewed coffee wafts through the air, enticing the senses and beckoning all to partake in its deep, velvety goodness. The first sip is like a symphony of flavors, with notes of dark chocolate, caramel, and a hint of smokiness that dance on the palate. As the flavors unfold, the bitterness of the coffee gives way to a smooth, creamy texture that coats the tongue and leaves a satisfying aftertaste. Whether enjoyed on its own or paired with a sweet treat, coffee is a true delight that never fails to satisfy the senses and lift the spirits.
+
+In this description, the concept of coffee is vividly described using sensory language to evoke a sense of experience and emotion. The use of words like "aroma", "entices", "beckoning", "symphony", "dance", and "satisfying" creates a sensory experience that transports the reader to a place of comfort and indulgence. The description also highlights the complexity'
+      1.  The         | 24.98%
+      2.  A           | 13.37%
+      3.  Rich        | 11.09%
+      4.  Imagine     |  9.78%
+      5.  rich        |  7.16%
 
 Done.

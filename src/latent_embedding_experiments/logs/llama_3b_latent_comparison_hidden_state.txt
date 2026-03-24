@@ -1,0 +1,71 @@
+🌌 THE SUBCONSCIOUS ALIGNMENT LAB 🌌
+Measuring the geometric fidelity between synthetic forges and the true hidden state.
+
+
+====================================================================================================
+📜 PROMPT: 'The fundamental difference between human consciousness and artificial intelligence is'
+====================================================================================================
+
+[Predicted Horizon]
+  1.  that           | Confidence: 34.15%
+  2.  the            | Confidence: 26.59%
+  3.  not            | Confidence: 16.13%
+  4.  a              | Confidence:  3.38%
+  5.  still          | Confidence:  2.63%
+  6.  their          | Confidence:  1.93%
+  7.  rooted         | Confidence:  1.81%
+  8.  often          | Confidence:  1.41%
+  9.  how            | Confidence:  1.17%
+  10.  in             | Confidence:  0.85%
+
+[Geometric Alignment to True Hidden State]
+  Top-1 Token Baseline : 0.2302
+  CoLaR Geometry       : 0.3689
+  Soft Thinking        : 0.3405
+  Geometric Solver     : 0.3793
+
+====================================================================================================
+📜 PROMPT: 'Deep in the heart of the overgrown ruins, the air tasted like'
+====================================================================================================
+
+[Predicted Horizon]
+  1.  decay          | Confidence: 25.69%
+  2.  dust           | Confidence: 10.06%
+  3.  damp           | Confidence:  6.50%
+  4.  the            | Confidence:  5.73%
+  5.  smoke          | Confidence:  5.06%
+  6.  ash            | Confidence:  4.75%
+  7.  rust           | Confidence:  4.19%
+  8.  ozone          | Confidence:  3.48%
+  9.  a              | Confidence:  3.48%
+  10.  old            | Confidence:  2.11%
+
+[Geometric Alignment to True Hidden State]
+  Top-1 Token Baseline : 0.1716
+  CoLaR Geometry       : 0.4024
+  Soft Thinking        : 0.3835
+  Geometric Solver     : 0.3974
+
+====================================================================================================
+📜 PROMPT: 'If you want to truly understand quantum mechanics, you must first'
+====================================================================================================
+
+[Predicted Horizon]
+  1.  understand     | Confidence: 65.39%
+  2.  grasp          | Confidence:  6.89%
+  3.  learn          | Confidence:  5.37%
+  4.  comprehend     | Confidence:  3.69%
+  5.  develop        | Confidence:  1.97%
+  6.  be             | Confidence:  1.20%
+  7.  master         | Confidence:  0.93%
+  8.  read           | Confidence:  0.82%
+  9.  accept         | Confidence:  0.82%
+  10.  appreciate     | Confidence:  0.68%
+
+[Geometric Alignment to True Hidden State]
+  Top-1 Token Baseline : 0.2253
+  CoLaR Geometry       : 0.4135
+  Soft Thinking        : 0.3450
+  Geometric Solver     : 0.4211
+
+Alignment sequence complete.

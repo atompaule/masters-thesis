@@ -1,0 +1,270 @@
+Vocab size: 128256
+Embedding dimension: 4096
+Mean norm: 0.6713
+Median norm: 0.6849
+Std norm:  0.0840
+
+Top tokens by norm:
+0.9313 | 'innitus'
+0.9067 | '喔'
+0.8601 | ' Mandela'
+0.8544 | ' Roths'
+0.8542 | ' stressful'
+0.8537 | ' contagious'
+0.8530 | ' devastating'
+0.8475 | ' interpersonal'
+0.8472 | ' loneliness'
+0.8466 | ' morality'
+0.8429 | ' lucrative'
+0.8428 | ' resentment'
+0.8411 | ' picturesque'
+0.8408 | ' withstand'
+0.8407 | ' adversity'
+
+Lowest tokens by norm:
+0.0000 | '<|reserved_special_token_18|>'
+0.0000 | '<|reserved_special_token_101|>'
+0.0000 | '<|reserved_special_token_155|>'
+0.0000 | '<|reserved_special_token_3|>'
+0.0000 | '<|reserved_special_token_138|>'
+0.0000 | '<|reserved_special_token_214|>'
+0.0000 | '�'
+0.0000 | '�'
+0.0000 | '<|reserved_special_token_207|>'
+0.0000 | '<|reserved_special_token_169|>'
+0.0000 | '<|reserved_special_token_198|>'
+0.0000 | '<|reserved_special_token_209|>'
+0.0000 | '<|reserved_special_token_111|>'
+0.0000 | '<|reserved_special_token_45|>'
+0.0000 | '<|reserved_special_token_14|>'
+
+--- 1. Average pairwise cosine similarity ---
+Sample size: 10000. Mean off-diagonal cosine similarity: 0.016061
+1 - |mean cosine| (Rudman-style comparison to isotropy scale [0,1]): 0.983939
+Interpretation (heuristic): moderate alignment.
+
+--- 2. PC spectrum / eigenvalue ratios ---
+Sample size: 10000, ambient dim: 4096
+Number of positive PCs (from SVD rank): 4096
+λ_max / sum(λ) (anisotropy concentration): 0.006225
+Participation ratio (sum λ)² / sum λ²: 2087.0752
+Effective rank exp(entropy of normalized spectrum): 2973.5190
+Variance in top-1 PCs: 0.006225
+Variance in top-5 PCs: 0.019620
+Variance in top-10 PCs: 0.029118
+Variance in top-50 PCs: 0.071702
+
+--- 2b. Vocabulary tokens most cosine-aligned with sample PCs ---
+PC axis = row of Vh from torch.linalg.svd(centered sample). Score = cos(L2_norm(embed - sample_mean), PC_axis). Same sample_mean as in §2; full vocab scanned in row batches.
+
+PC 1 (fraction of sample variance along this axis: 0.006225)
+   1. cos=0.265507 | id=4857 | ' building'
+   2. cos=0.265416 | id=4500 | ' development'
+   3. cos=0.264875 | id=6975 | ' learning'
+   4. cos=0.263830 | id=3495 | ' research'
+   5. cos=0.262924 | id=6873 | ' education'
+   6. cos=0.262037 | id=2410 | ' power'
+   7. cos=0.259044 | id=5178 | ' performance'
+   8. cos=0.256943 | id=3956 | ' products'
+   9. cos=0.256860 | id=4029 | ' community'
+  10. cos=0.256525 | id=4967 | ' training'
+  11. cos=0.255855 | id=15813 | ' assessment'
+  12. cos=0.255544 | id=2626 | ' business'
+  13. cos=0.255462 | id=4236 | ' students'
+  14. cos=0.255435 | id=5788 | ' production'
+  15. cos=0.253545 | id=2955 | ' design'
+
+PC 2 (fraction of sample variance along this axis: 0.004060)
+   1. cos=0.164223 | id=11305 | 'aje'
+   2. cos=0.163955 | id=77080 | 'ayo'
+   3. cos=0.160849 | id=113528 | 'uyu'
+   4. cos=0.159859 | id=39234 | 'ycz'
+   5. cos=0.159661 | id=28246 | 'oso'
+   6. cos=0.159092 | id=47547 | 'iani'
+   7. cos=0.159082 | id=24985 | 'icia'
+   8. cos=0.158961 | id=74485 | 'enco'
+   9. cos=0.158378 | id=12273 | 'aba'
+  10. cos=0.157850 | id=87287 | 'itto'
+  11. cos=0.157528 | id=106493 | 'iky'
+  12. cos=0.157417 | id=18536 | 'ilo'
+  13. cos=0.156371 | id=96097 | 'ős'
+  14. cos=0.155684 | id=51758 | 'ueva'
+  15. cos=0.155444 | id=86760 | 'uste'
+
+PC 3 (fraction of sample variance along this axis: 0.003598)
+   1. cos=0.162220 | id=27268 | ' Joh'
+   2. cos=0.161170 | id=31054 | ' Bou'
+   3. cos=0.158364 | id=5460 | ' Dav'
+   4. cos=0.157126 | id=26441 | ' Bab'
+   5. cos=0.156787 | id=47247 | ' Gor'
+   6. cos=0.156016 | id=42136 | ' Viv'
+   7. cos=0.155804 | id=35962 | ' Pul'
+   8. cos=0.155329 | id=35934 | ' Jak'
+   9. cos=0.154971 | id=46270 | ' Lud'
+  10. cos=0.154539 | id=55858 | ' Bri'
+  11. cos=0.154480 | id=24277 | ' Kon'
+  12. cos=0.154478 | id=63370 | ' Fuj'
+  13. cos=0.154414 | id=55679 | ' Gol'
+  14. cos=0.153662 | id=36824 | ' Rab'
+  15. cos=0.153446 | id=14103 | ' Luc'
+
+PC 4 (fraction of sample variance along this axis: 0.003002)
+   1. cos=0.148416 | id=74637 | ' Jaguar'
+   2. cos=0.147865 | id=80742 | ' Panasonic'
+   3. cos=0.146094 | id=78202 | ' Warwick'
+   4. cos=0.142949 | id=92222 | ' CoreData'
+   5. cos=0.142569 | id=83099 | ' Sapphire'
+   6. cos=0.142394 | id=47783 | ' McConnell'
+   7. cos=0.141525 | id=71758 | ' Lexington'
+   8. cos=0.140776 | id=93401 | ' Ridley'
+   9. cos=0.140294 | id=73605 | ' Burlington'
+  10. cos=0.139853 | id=63073 | ' Coy'
+  11. cos=0.139599 | id=80908 | ' Coinbase'
+  12. cos=0.139021 | id=86532 | ' Scarborough'
+  13. cos=0.138669 | id=92451 | ' Lumia'
+  14. cos=0.138621 | id=56976 | ' Breitbart'
+  15. cos=0.138517 | id=78595 | ' Cadillac'
+
+PC 5 (fraction of sample variance along this axis: 0.002735)
+   1. cos=0.211291 | id=128008 | '<|eom_id|>'
+   2. cos=0.201661 | id=125022 | 'џN'
+   3. cos=0.178104 | id=1319 | '(p'
+   4. cos=0.176532 | id=1246 | '.G'
+   5. cos=0.175598 | id=342 | ' g'
+   6. cos=0.173770 | id=281 | ' p'
+   7. cos=0.170513 | id=282 | ' f'
+   8. cos=0.170284 | id=38 | 'G'
+   9. cos=0.170192 | id=623 | '_p'
+  10. cos=0.169688 | id=33 | 'B'
+  11. cos=0.169548 | id=3283 | '(h'
+  12. cos=0.168918 | id=2325 | '_v'
+  13. cos=0.168508 | id=890 | '_b'
+  14. cos=0.168483 | id=79 | 'p'
+  15. cos=0.168474 | id=293 | ' b'
+
+PC 6 (fraction of sample variance along this axis: 0.002349)
+   1. cos=0.146893 | id=6510 | ' attr'
+   2. cos=0.140558 | id=13988 | ' proc'
+   3. cos=0.139423 | id=7763 | ' rect'
+   4. cos=0.139360 | id=19914 | ' refr'
+   5. cos=0.138488 | id=9216 | ' resp'
+   6. cos=0.137161 | id=32455 | ' punct'
+   7. cos=0.135239 | id=22535 | ' perf'
+   8. cos=0.134139 | id=36841 | ' precip'
+   9. cos=0.132906 | id=24964 | ' scal'
+  10. cos=0.131377 | id=4244 | ' vari'
+  11. cos=0.129582 | id=14175 | ' perm'
+  12. cos=0.129377 | id=25455 | ' recip'
+  13. cos=0.127156 | id=48371 | ' interp'
+  14. cos=0.126941 | id=7893 | ' pul'
+  15. cos=0.125723 | id=2047 | ' prop'
+
+PC 7 (fraction of sample variance along this axis: 0.002024)
+   1. cos=0.144312 | id=90706 | ' cocina'
+   2. cos=0.144164 | id=29175 | '"))
+
+'
+   3. cos=0.139752 | id=56562 | ' agua'
+   4. cos=0.139105 | id=4489 | '))
+
+'
+   5. cos=0.137704 | id=79078 | '"))))
+'
+   6. cos=0.136694 | id=71544 | ' mesa'
+   7. cos=0.136091 | id=80688 | ' chica'
+   8. cos=0.135273 | id=52413 | ' suma'
+   9. cos=0.135191 | id=38028 | ']))
+
+'
+  10. cos=0.133971 | id=97431 | ' kvinna'
+  11. cos=0.133441 | id=94213 | ' milan'
+  12. cos=0.132883 | id=5572 | '"))
+'
+  13. cos=0.131422 | id=40097 | ' eta'
+  14. cos=0.131412 | id=7132 | ''))
+'
+  15. cos=0.131246 | id=49869 | ' fila'
+
+PC 8 (fraction of sample variance along this axis: 0.001774)
+   1. cos=0.137538 | id=10919 | ' Love'
+   2. cos=0.136927 | id=13142 | ' Joe'
+   3. cos=0.133006 | id=12835 | ' laugh'
+   4. cos=0.132866 | id=1440 | ' know'
+   5. cos=0.131880 | id=13120 | ' Night'
+   6. cos=0.131612 | id=29351 | 'Love'
+   7. cos=0.131339 | id=3021 | ' love'
+   8. cos=0.129742 | id=3828 | ' girl'
+   9. cos=0.129082 | id=51537 | 'Night'
+  10. cos=0.128778 | id=2771 | ' sure'
+  11. cos=0.128597 | id=41444 | 'Joe'
+  12. cos=0.127043 | id=3814 | ' night'
+  13. cos=0.126665 | id=3868 | ' wait'
+  14. cos=0.125456 | id=106239 | ' мне'
+  15. cos=0.125179 | id=16026 | ' hoping'
+
+PC 9 (fraction of sample variance along this axis: 0.001710)
+   1. cos=0.146364 | id=47652 | ' CITY'
+   2. cos=0.134971 | id=14444 | ' DATA'
+   3. cos=0.134598 | id=6007 | ' TV'
+   4. cos=0.133282 | id=83931 | ' DAYS'
+   5. cos=0.129621 | id=3363 | ' city'
+   6. cos=0.129469 | id=8055 | '_DATA'
+   7. cos=0.129305 | id=86411 | '_MA'
+   8. cos=0.127881 | id=41498 | '_FS'
+   9. cos=0.124886 | id=24618 | ' GP'
+  10. cos=0.124254 | id=2816 | ' site'
+  11. cos=0.123887 | id=113337 | ' školy'
+  12. cos=0.123410 | id=23029 | ' TIME'
+  13. cos=0.123143 | id=39186 | ' SERVICE'
+  14. cos=0.122754 | id=85352 | '_VC'
+  15. cos=0.122609 | id=120210 | '國家'
+
+PC 10 (fraction of sample variance along this axis: 0.001642)
+   1. cos=0.222791 | id=1192 | '))
+'
+   2. cos=0.220897 | id=2608 | '])
+'
+   3. cos=0.218706 | id=6054 | ')))
+'
+   4. cos=0.216568 | id=1125 | '));
+'
+   5. cos=0.214154 | id=11147 | ']))
+'
+   6. cos=0.211721 | id=3317 | '));
+
+'
+   7. cos=0.211175 | id=56631 | ']);
+
+'
+   8. cos=0.207955 | id=92376 | ' })
+
+'
+   9. cos=0.207212 | id=340 | ')
+'
+  10. cos=0.205789 | id=74131 | '))}
+'
+  11. cos=0.204328 | id=9801 | '])
+
+'
+  12. cos=0.204102 | id=2622 | ']);
+'
+  13. cos=0.203894 | id=10792 | ')}
+'
+  14. cos=0.202356 | id=696 | ')
+
+'
+  15. cos=0.201937 | id=45294 | '}))
+'
+
+--- 3. Global partition isotropy I(W) (Rajaee et al. 2021) ---
+SVD rows: 8192, eval rows: 65536, |U| (eigvecs used): 256
+I(W) = min F / max F over U: 0.916806 (1 = isotropic, 0 = extreme)
+log I(W): -0.086860
+
+--- 4. IsoScore (Rudman et al. 2022) ---
+Sample size: 10000, ambient dim d=4096
+IsoScore ι(X) in [0, 1]: 0.509420 (1 = isotropic utilization)
+
+--- 5. Intrinsic dimension (Levina–MLE) ---
+Sample size: 10000, k=20, valid local estimates: 0.00%
+ID estimate failed.

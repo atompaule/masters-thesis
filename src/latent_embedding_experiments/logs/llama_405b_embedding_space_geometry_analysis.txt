@@ -38,5 +38,32 @@ Lowest tokens by norm:
 0.0087 | '<|reserved_special_token_234|>'
 0.0087 | '<|reserved_special_token_73|>'
 
-Average cosine similarity: 0.0064
-Near-isotropic distribution
+--- 1. Average pairwise cosine similarity ---
+Sample size: 10000. Mean off-diagonal cosine similarity: 0.006356
+1 - |mean cosine| (Rudman-style comparison to isotropy scale [0,1]): 0.993644
+Interpretation (heuristic): mean cosine near 0 (not a strong global cone).
+
+--- 2. PC spectrum / eigenvalue ratios ---
+Sample size: 10000, ambient dim: 16384
+Number of positive PCs (from SVD rank): 9999
+λ_max / sum(λ) (anisotropy concentration): 0.004628
+Participation ratio (sum λ)² / sum λ²: 1956.3226
+Effective rank exp(entropy of normalized spectrum): 4441.4663
+Variance in top-1 PCs: 0.004628
+Variance in top-5 PCs: 0.018929
+Variance in top-10 PCs: 0.033118
+Variance in top-50 PCs: 0.109794
+
+--- 3. Global partition isotropy I(W) (Rajaee et al. 2021) ---
+SVD rows: 8192, eval rows: 65536, |U| (eigvecs used): 256
+I(W) = min F / max F over U: 0.931097 (1 = isotropic, 0 = extreme)
+log I(W): -0.071392
+
+--- 4. IsoScore (Rudman et al. 2022) ---
+Sample size: 10000, ambient dim d=16384
+IsoScore ι(X) in [0, 1]: 0.119351 (1 = isotropic utilization)
+
+--- 5. Intrinsic dimension (Levina–MLE) ---
+Sample size: 10000, k=20, valid local estimates: 28.53%
+Intrinsic dimension estimate (mean local MLE): 5.8644
+ID / ambient_dim (normalized ID score): 0.00035794

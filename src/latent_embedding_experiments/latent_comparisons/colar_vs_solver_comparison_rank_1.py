@@ -107,16 +107,17 @@ with open(LOG_FILE, "w", encoding="utf-8") as f:
                 v_colar = torch.sum(top_k_raw_embs, dim=0, keepdim=True) / math.sqrt(K)
                 colar_unit = F.normalize(v_colar, p=2, dim=1)
 
-                # B. Solver Vector
+                # B. Solver Vector (T=1 top-k masses, renormalized; solver applies p^(1/T))
                 target_embs_norm = norm_dictionary[top_k_ids]
+                solver_pool_probs = top_k_probs / top_k_probs.sum()
                 with torch.enable_grad():
                     v_solver = fast_geometric_solver(
                         target_embs_norm,
-                        top_k_ids,
+                        top_k_ids.tolist(),
                         norm_dictionary,
-                        temp_soft_norm,
                         avg_target_mag,
-                        adj_probs,
+                        solver_pool_probs,
+                        temperature=TEMPERATURE,
                     )
                 solver_unit = F.normalize(v_solver, p=2, dim=1)
 

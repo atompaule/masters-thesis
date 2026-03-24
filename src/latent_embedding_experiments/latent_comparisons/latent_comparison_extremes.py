@@ -5,11 +5,12 @@ from dataclasses import dataclass
 
 import torch
 import torch.nn.functional as F
-import torch.optim as optim
 from datasets import load_dataset
 from huggingface_hub import hf_hub_download
 from safetensors.torch import load_file
 from transformers import AutoTokenizer
+
+from src.latent_embedding_experiments.algorithms.solver import fast_geometric_solver
 
 # =========================================================
 # CONFIG
@@ -23,11 +24,13 @@ class Config:
     k: int = 10
     num_steps: int = 100
     worst_n: int = 20
-    log_file: str = "src/latent_embedding_experiments/logs/llama_405b_latent_comparison_extremes.txt"
+    log_file: str = (
+        "src/latent_embedding_experiments/logs/llama_405b_latent_comparison_extremes.txt"
+    )
 
-    solver_steps: int = 150
+    solver_steps: int = 300
     lr: float = 0.05
-    danger_topk: int = 1000
+    danger_topk: int = 2000
 
 
 CFG = Config()
@@ -89,49 +92,6 @@ emb = load_embeddings(CFG.model_id)
 
 
 # =========================================================
-# SOLVER
-# =========================================================
-
-
-def fast_geometric_solver(target_norm, target_ids, dict_norm, magnitude, adj_probs):
-    k = len(target_ids)
-
-    colar_dir = F.normalize(target_norm.sum(dim=0, keepdim=True), dim=1)
-
-    with torch.no_grad():
-        sims = colar_dir @ dict_norm.T
-        _, idxs = torch.topk(sims.squeeze(0), CFG.danger_topk)
-
-        mask = ~torch.isin(idxs, torch.tensor(target_ids, device=device))
-        interlopers = dict_norm[idxs[mask]]
-
-    probe = torch.nn.Parameter(colar_dir.squeeze(0))
-    optimizer = optim.Adam([probe], lr=CFG.lr)
-
-    for _ in range(CFG.solver_steps):
-        optimizer.zero_grad()
-
-        p = F.normalize(probe.unsqueeze(0), dim=1)
-        t_sims = (p @ target_norm.T).squeeze(0)
-
-        pull = -torch.sum(t_sims * adj_probs) * 5.0
-
-        diffs = t_sims[1:] - t_sims[:-1]
-        gaps = adj_probs[:-1] - adj_probs[1:]
-        rank_loss = torch.sum(F.relu(diffs + gaps * 0.1))
-
-        i_sims = (p @ interlopers.T).squeeze(0)
-        hard_negs, _ = torch.topk(i_sims, k)
-        push = F.relu(hard_negs.mean() - t_sims.min() + 0.05) * 1.5
-
-        loss = pull + 3.0 * rank_loss + push
-        loss.backward()
-        optimizer.step()
-
-    return F.normalize(probe.unsqueeze(0), dim=1)
-
-
-# =========================================================
 # EXTRACTION
 # =========================================================
 
@@ -162,19 +122,22 @@ def extract_top_k(row, max_k):
 
 def build_vectors(ids, probs):
     raw = emb["raw"][ids]
-    norm = emb["norm"][ids]
 
     k = len(ids)
 
     v_colar = raw.sum(dim=0, keepdim=True) / math.sqrt(k)
     v_soft = (raw * probs.unsqueeze(1)).sum(dim=0, keepdim=True)
 
-    adj = probs ** (1.0 / CFG.temperature)
-    adj = adj / adj.sum()
-
+    avg_target_mag = torch.norm(raw, p=2, dim=1).mean().item()
+    target_norm = emb["norm"][ids]
     with torch.enable_grad():
         v_solver = fast_geometric_solver(
-            norm, ids, emb["norm"], torch.norm(raw, dim=1).mean().item(), adj
+            target_norm,
+            ids.tolist(),
+            emb["norm"],
+            avg_target_mag,
+            probs,
+            temperature=CFG.temperature,
         )
 
     return v_colar, v_soft, v_solver

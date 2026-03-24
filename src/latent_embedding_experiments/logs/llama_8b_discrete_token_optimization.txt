@@ -1,0 +1,150 @@
+🌌 DISCRETE TOKEN ISOLATION LAB 🌌
+Mode: Eroding semantic halos while anchoring to the root geometry.
+
+
+====================================================================================================
+🔬 ISOLATING TOKEN: ' water'
+====================================================================================================
+
+[Geometry Diagnostics]
+Target Token:       3090
+Original Magnitude: 0.5501
+Isolated Magnitude: 0.5501
+Anchor Fidelity:    0.9797 (Cosine similarity between Original and Isolated)
+
+--- Nearest Neighbor Shift (Cosine Similarity) ---
+Rank | Original Token                   | Isolated (Sharpened) Token      
+----------------------------------------------------------------------------
+1    | *' water' (1.000)                | *' water' (0.980)               
+2    |  ' Water' (0.745)                |  ' Water' (0.681)               
+3    |  ' WATER' (0.585)                |  ' WATER' (0.517)               
+4    |  '-water' (0.556)                |  '-water' (0.491)               
+5    |  'Water' (0.549)                 |  'Water' (0.472)                
+6    |  'water' (0.435)                 |  'water' (0.355)                
+7    |  ' waters' (0.376)               |  ' waters' (0.309)              
+8    |  '_water' (0.301)                |  '_water' (0.231)               
+9    |  ' air' (0.282)                  |  ' agua' (0.221)                
+10   |  ' agua' (0.279)                 |  ' air' (0.217)                 
+11   |  ' воды' (0.248)                 |  ' воды' (0.186)                
+12   |  ' freshwater' (0.239)           |  ' freshwater' (0.174)          
+13   |  ' oil' (0.238)                  |  ' Wasser' (0.170)              
+14   |  ' blood' (0.230)                |  ' oil' (0.170)                 
+15   |  ' river' (0.227)                |  ' river' (0.167)               
+
+====================================================================================================
+🔬 ISOLATING TOKEN: ' king'
+====================================================================================================
+
+[Geometry Diagnostics]
+Target Token:       11734
+Original Magnitude: 0.6004
+Isolated Magnitude: 0.6004
+Anchor Fidelity:    0.9755 (Cosine similarity between Original and Isolated)
+
+--- Nearest Neighbor Shift (Cosine Similarity) ---
+Rank | Original Token                   | Isolated (Sharpened) Token      
+----------------------------------------------------------------------------
+1    | *' king' (1.000)                 | *' king' (0.976)                
+2    |  ' King' (0.632)                 |  ' King' (0.543)                
+3    |  ' KING' (0.481)                 |  ' KING' (0.398)                
+4    |  'King' (0.463)                  |  'King' (0.375)                 
+5    |  ' kings' (0.396)                |  ' kings' (0.312)               
+6    |  ' queen' (0.353)                |  ' queen' (0.253)               
+7    |  ' Queen' (0.271)                |  'king' (0.177)                 
+8    |  ' Kings' (0.262)                |  ' Kings' (0.175)               
+9    |  ' emperor' (0.251)              |  ' emperor' (0.173)             
+10   |  'king' (0.237)                  |  ' Queen' (0.163)               
+11   |  ' kingdom' (0.215)              |  ' kingdom' (0.135)             
+12   |  ' prince' (0.210)               |  ' bishop' (0.134)              
+13   |  ' lord' (0.208)                 |  ' roi' (0.128)                 
+14   |  ' bishop' (0.203)               |  ' lord' (0.126)                
+15   |  ' pope' (0.194)                 |  ' pope' (0.120)                
+
+====================================================================================================
+🔬 ISOLATING TOKEN: ' beautiful'
+====================================================================================================
+
+[Geometry Diagnostics]
+Target Token:       6366
+Original Magnitude: 0.6693
+Isolated Magnitude: 0.6693
+Anchor Fidelity:    0.9752 (Cosine similarity between Original and Isolated)
+
+--- Nearest Neighbor Shift (Cosine Similarity) ---
+Rank | Original Token                   | Isolated (Sharpened) Token      
+----------------------------------------------------------------------------
+1    | *' beautiful' (1.000)            | *' beautiful' (0.975)           
+2    |  ' Beautiful' (0.505)            |  ' Beautiful' (0.426)           
+3    |  'Beautiful' (0.456)             |  'Beautiful' (0.376)            
+4    |  'beautiful' (0.421)             |  'beautiful' (0.349)            
+5    |  ' beautifully' (0.381)          |  ' beautifully' (0.309)         
+6    |  ' gorgeous' (0.381)             |  ' gorgeous' (0.296)            
+7    |  ' lovely' (0.342)               |  ' lovely' (0.249)              
+8    |  ' wonderful' (0.329)            |  ' beauty' (0.232)              
+9    |  ' beauty' (0.302)               |  ' wonderful' (0.228)           
+10   |  ' amazing' (0.290)              |  'autiful' (0.203)              
+11   |  'autiful' (0.268)               |  ' amazing' (0.189)             
+12   |  ' magnificent' (0.258)          |  ' magnificent' (0.173)         
+13   |  ' stunning' (0.256)             |  ' stunning' (0.169)            
+14   |  ' delicious' (0.252)            |  ' delicious' (0.168)           
+15   |  ' incredible' (0.245)           |  ' powerful' (0.152)            
+
+====================================================================================================
+🔬 ISOLATING TOKEN: ' paradox'
+====================================================================================================
+
+[Geometry Diagnostics]
+Target Token:       52313
+Original Magnitude: 0.7736
+Isolated Magnitude: 0.7736
+Anchor Fidelity:    0.9865 (Cosine similarity between Original and Isolated)
+
+--- Nearest Neighbor Shift (Cosine Similarity) ---
+Rank | Original Token                   | Isolated (Sharpened) Token      
+----------------------------------------------------------------------------
+1    | *' paradox' (1.000)              | *' paradox' (0.987)             
+2    |  'adox' (0.582)                  |  'adox' (0.550)                 
+3    |  ' contradiction' (0.154)        |  ' metaphor' (0.089)            
+4    |  ' metaphor' (0.152)             |  ' contradiction' (0.078)       
+5    |  ' contradiction..' (0.136)      |  ' dilemma' (0.074)             
+6    |  ' contradictory' (0.135)        |  ' contradictory' (0.073)       
+7    |  ' dilemma' (0.134)              |  ' analogy' (0.070)             
+8    |  ' paradigm' (0.124)             |  ' puzzle' (0.069)              
+9    |  ' puzzle' (0.119)               |  ' illusion' (0.069)            
+10   |  ' scandal' (0.117)              |  ' controversies' (0.069)       
+11   |  ' phenomenon' (0.116)           |  ' axiom' (0.069)               
+12   |  ' controversies' (0.113)        |  ' metaph' (0.069)              
+13   |  ' axiom' (0.112)                |  ' vortex' (0.068)              
+14   |  ' illusion' (0.112)             |  '.typ' (0.068)                 
+15   |  ' principle' (0.112)            |  'odox' (0.068)                 
+
+====================================================================================================
+🔬 ISOLATING TOKEN: ' computer'
+====================================================================================================
+
+[Geometry Diagnostics]
+Target Token:       6500
+Original Magnitude: 0.6081
+Isolated Magnitude: 0.6081
+Anchor Fidelity:    0.9765 (Cosine similarity between Original and Isolated)
+
+--- Nearest Neighbor Shift (Cosine Similarity) ---
+Rank | Original Token                   | Isolated (Sharpened) Token      
+----------------------------------------------------------------------------
+1    | *' computer' (1.000)             | *' computer' (0.976)            
+2    |  ' Computer' (0.598)             |  ' Computer' (0.517)            
+3    |  ' computers' (0.587)            |  ' computers' (0.510)           
+4    |  'Computer' (0.477)              |  'Computer' (0.394)             
+5    |  'computer' (0.445)              |  'computer' (0.368)             
+6    |  ' COMPUTER' (0.366)             |  ' COMPUTER' (0.284)            
+7    |  ' Computers' (0.287)            |  'puter' (0.209)                
+8    |  'puter' (0.283)                 |  ' Computers' (0.202)           
+9    |  ' software' (0.276)             |  ' software' (0.202)            
+10   |  ' laptop' (0.272)               |  ' laptop' (0.200)              
+11   |  ' computing' (0.259)            |  ' computing' (0.178)           
+12   |  ' PC' (0.250)                   |  ' PC' (0.169)                  
+13   |  ' machine' (0.240)              |  ' počíta' (0.163)              
+14   |  ' počíta' (0.227)               |  ' machine' (0.162)             
+15   |  ' digital' (0.223)              |  ' digital' (0.151)             
+
+Isolation sequence complete.
