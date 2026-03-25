@@ -10,7 +10,7 @@ from huggingface_hub import hf_hub_download
 from safetensors.torch import load_file
 from transformers import AutoTokenizer
 
-from src.latent_embedding_experiments.algorithms.solver import fast_geometric_solver
+from src.latent_embedding_experiments.algorithms.solver import geometric_solver
 
 # =========================================================
 # CONFIG
@@ -131,7 +131,7 @@ def build_vectors(ids, probs):
     avg_target_mag = torch.norm(raw, p=2, dim=1).mean().item()
     target_norm = emb["norm"][ids]
     with torch.enable_grad():
-        v_solver = fast_geometric_solver(
+        v_solver = geometric_solver(
             target_norm,
             ids.tolist(),
             emb["norm"],

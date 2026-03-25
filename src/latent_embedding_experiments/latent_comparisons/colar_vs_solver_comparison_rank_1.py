@@ -6,7 +6,7 @@ from datasets import load_dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 # --- IMPORTS ---
-from src.latent_embedding_experiments.algorithms.solver import fast_geometric_solver
+from src.latent_embedding_experiments.algorithms.solver import geometric_solver
 
 # --- CONFIGURATION ---
 MODEL_ID = "meta-llama/Llama-3.1-8B-Instruct"
@@ -111,7 +111,7 @@ with open(LOG_FILE, "w", encoding="utf-8") as f:
                 target_embs_norm = norm_dictionary[top_k_ids]
                 solver_pool_probs = top_k_probs / top_k_probs.sum()
                 with torch.enable_grad():
-                    v_solver = fast_geometric_solver(
+                    v_solver = geometric_solver(
                         target_embs_norm,
                         top_k_ids.tolist(),
                         norm_dictionary,

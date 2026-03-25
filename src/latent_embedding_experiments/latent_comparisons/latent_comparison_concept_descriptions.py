@@ -7,7 +7,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from src.latent_embedding_experiments.algorithms.solver import fast_geometric_solver
+from src.latent_embedding_experiments.algorithms.solver import geometric_solver
 
 # =========================================================
 # CONFIG
@@ -165,7 +165,7 @@ def build_vectors(target_ids, adj_probs, entropy_adj_probs, isolated_logits):
     solver_pool_probs = F.softmax(isolated_logits, dim=0)
 
     with torch.enable_grad():
-        v_solver = fast_geometric_solver(
+        v_solver = geometric_solver(
             target_norm=target_embs_norm,
             target_ids=target_ids,
             dict_norm=norm_dictionary,

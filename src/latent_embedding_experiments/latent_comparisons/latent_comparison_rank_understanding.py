@@ -7,7 +7,7 @@ import torch
 import torch.nn.functional as F
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from src.latent_embedding_experiments.algorithms.solver import fast_geometric_solver
+from src.latent_embedding_experiments.algorithms.solver import geometric_solver
 
 # =========================================================
 # CONFIG
@@ -161,7 +161,7 @@ def build_vectors(target_ids, logits):
     magnitude = v_soft.norm(dim=1).item()
 
     with torch.enable_grad():
-        v_solver = fast_geometric_solver(
+        v_solver = geometric_solver(
             target_norm=F.normalize(raw, dim=1),
             target_ids=target_ids,
             dict_norm=norm_dictionary,

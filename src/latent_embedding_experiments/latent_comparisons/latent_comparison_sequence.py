@@ -5,7 +5,7 @@ import torch
 import torch.nn.functional as F
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from src.latent_embedding_experiments.algorithms.solver import fast_geometric_solver
+from src.latent_embedding_experiments.algorithms.solver import geometric_solver
 
 # --- CONFIGURATION ---
 MODEL_ID = "meta-llama/Llama-3.1-8B-Instruct"
@@ -428,7 +428,7 @@ def run_latent_comparison_sequence(
                 # 2. Geometric Solver
                 target_embs_norm = norm_dictionary[pool_ids]
                 with torch.enable_grad():
-                    v_solver = fast_geometric_solver(
+                    v_solver = geometric_solver(
                         target_embs_norm,
                         pool_ids,
                         norm_dictionary,
