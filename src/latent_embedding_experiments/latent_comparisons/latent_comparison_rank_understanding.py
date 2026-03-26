@@ -162,10 +162,10 @@ def build_vectors(target_ids, logits):
 
     with torch.enable_grad():
         v_solver = geometric_solver(
-            target_norm=F.normalize(raw, dim=1),
+            target_embs_norm=F.normalize(raw, dim=1),
             target_ids=target_ids,
-            dict_norm=norm_dictionary,
-            magnitude=magnitude,
+            vocab_embs_norm=norm_dictionary,
+            target_magnitude=magnitude,
             pool_probs=solver_pool_probs,
             temperature=CFG.temperature,
         )

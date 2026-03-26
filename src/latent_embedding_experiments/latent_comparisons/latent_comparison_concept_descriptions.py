@@ -166,11 +166,11 @@ def build_vectors(target_ids, adj_probs, entropy_adj_probs, isolated_logits):
 
     with torch.enable_grad():
         v_solver = geometric_solver(
-            target_norm=target_embs_norm,
+            target_embs_norm=target_embs_norm,
             target_ids=target_ids,
-            dict_norm=norm_dictionary,
-            magnitude=avg_target_mag,
-            pool_logits=solver_pool_probs,
+            vocab_embs_norm=norm_dictionary,
+            target_magnitude=avg_target_mag,
+            target_logits=solver_pool_probs,
             temperature=CFG.temperature,
         )
 
