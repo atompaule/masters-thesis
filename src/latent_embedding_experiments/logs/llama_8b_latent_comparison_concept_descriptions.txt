@@ -1,28 +1,26 @@
-🌌 LATENT INTERROGATION LAB 🌌
-Base Temp: 0.6 | Entropy Bounds: [1.80, 2.10]
+LATENT CONCEPT DESCRIPTION EXPERIMENT
+Temp: 0.6 | Top-p: 0.95 | k range: [1, 10] | Solver steps: 300
+
 
 ========================================================================================================================
-🧪 Real top-10 (8B): after '...consciousness and artificial intelligence is' (llama_8b_latent_comparison_sequence_discrete_top1.txt)
+EXPERIMENT: Real top-10 (8B): after '...consciousness and artificial intelligence is' (llama_8b_latent_comparison_sequence_discrete_top1.txt)
 ========================================================================================================================
 
---- THE CHEMICAL BASELINE (Input Anatomy) ---
-  Standard Temp (T=0.6) Entropy: 1.7164
-  Bounded Temp  (T=0.7601) Entropy: 1.9500
+--- INPUT TOKENS (k=10) ---
+  ID     | Token        | Logit  | Raw P    | Scaled P (T={CFG.temperature}) | Magnitude
+  --------------------------------------------------------------------------------------
+  5845   | ability      |  17.0 |   30.27% |               50.53% |   0.629
+  1648   | way          |  16.1 |   12.01% |               10.83% |   0.506
+  9546   | presence     |  16.0 |   10.67% |                8.88% |   0.657
+  7138   | nature       |  15.9 |   10.01% |                8.00% |   0.611
+  3823   | human        |  15.6 |    7.64% |                5.09% |   0.615
+  8824   | capacity     |  15.5 |    7.00% |                4.40% |   0.613
+  4846   | former       |  15.4 |    6.37% |                3.77% |   0.637
+  44122  | subjective   |  15.4 |    6.12% |                3.52% |   0.786
+  2592   | source       |  15.3 |    5.35% |                2.82% |   0.562
+  23965  | complexity   |  15.1 |    4.55% |                2.15% |   0.672
 
-  ID     | Token        | Logit  | Soft P   | Ent P    | Magnitude
-  ----------------------------------------------------------------
-  5845   | ability      |  17.0 |   50.53% |   39.55% |   0.629
-  1648   | way          |  16.1 |   10.83% |   11.73% |   0.506
-  9546   | presence     |  16.0 |    8.88% |   10.03% |   0.657
-  7138   | nature       |  15.9 |    8.00% |    9.23% |   0.611
-  3823   | human        |  15.6 |    5.09% |    6.46% |   0.615
-  8824   | capacity     |  15.5 |    4.40% |    5.76% |   0.613
-  4846   | former       |  15.4 |    3.77% |    5.09% |   0.637
-  44122  | subjective   |  15.4 |    3.52% |    4.83% |   0.786
-  2592   | source       |  15.3 |    2.82% |    4.05% |   0.562
-  23965  | complexity   |  15.1 |    2.15% |    3.27% |   0.672
-
---- PRE-FORGE CROSS-SIMILARITY (Internal Gravity) ---
+--- INPUT CROSS-SIMILARITY ---
             ability    way  presence  nature  human  capacity  former  subjective  source  complexity
 ability      1.0000 0.1356    0.1626  0.1111 0.0899    0.2780  0.0725      0.0625  0.0948      0.0992
 way          0.1356 1.0000    0.0936  0.1219 0.0765    0.0890  0.0685      0.0235  0.0808      0.0598
@@ -35,39 +33,84 @@ subjective   0.0625 0.0235    0.0373  0.0827 0.0836    0.0379  0.0309      1.000
 source       0.0948 0.0808    0.1116  0.1238 0.0896    0.1063  0.0874      0.0450  1.0000      0.0532
 complexity   0.0992 0.0598    0.0666  0.0997 0.0711    0.1364  0.0472      0.0692  0.0532      1.0000
 
+--- OUTPUT CROSS-SIMILARITY ---
+  Soft: |v| = 0.386
+  Solver: |v| = 0.619
+  CoLaR: |v| = 0.840
+  Centroid: |v| = 0.265
+           Soft  Solver  CoLaR  Centroid
+Soft     1.0000  0.8685 0.7317    0.7317
+Solver   0.8685  1.0000 0.8771    0.8771
+CoLaR    0.7317  0.8771 1.0000    1.0000
+Centroid 0.7317  0.8771 1.0000    1.0000
 
-
---- Cosine Similarity (Geometry) ---
-Rank | CoLaR                          | Soft                           | Soft-Ent                       | Solver                        
+--- NEAREST NEIGHBORS (COSINE) — * = target token ---
+Rank | Soft                           | Solver                         | CoLaR                          | Centroid                      
 ------------------------------------------------------------------------------------------------------------------------------------------
-1    | *' ability' (0.495)            | *' ability' (0.938)            | *' ability' (0.882)            | *' ability' (0.579)           
-2    | *' capacity' (0.466)           |  ' Ability' (0.457)            |  ' abilities' (0.438)          | *' way' (0.460)               
-3    | *' presence' (0.445)           |  ' abilities' (0.454)          |  ' Ability' (0.431)            | *' presence' (0.436)          
-4    | *' nature' (0.443)             | *' capacity' (0.370)           | *' capacity' (0.403)           | *' nature' (0.403)            
-5    | *' complexity' (0.418)         | *' presence' (0.347)           | *' presence' (0.398)           | *' human' (0.348)             
-6    | *' human' (0.408)              |  ' capability' (0.343)         | *' way' (0.353)                | *' capacity' (0.328)          
-7    | *' subjective' (0.406)         |  ' inability' (0.321)          | *' nature' (0.347)             | *' former' (0.295)            
-8    | *' source' (0.399)             | *' way' (0.312)                |  ' capability' (0.344)         | *' subjective' (0.294)        
-9    | *' way' (0.368)                |  'Ability' (0.308)             |  ' inability' (0.312)          | *' source' (0.284)            
-10   | *' former' (0.366)             | *' nature' (0.291)             |  'Ability' (0.295)             | *' complexity' (0.274)        
+1    | *' ability' (0.940)            | *' ability' (0.681)            | *' ability' (0.495)            | *' ability' (0.495)           
+2    |  ' Ability' (0.457)            | *' way' (0.460)                | *' capacity' (0.466)           | *' capacity' (0.466)          
+3    |  ' abilities' (0.452)          | *' presence' (0.429)           | *' presence' (0.445)           | *' presence' (0.445)          
+4    | *' capacity' (0.367)           | *' nature' (0.405)             | *' nature' (0.443)             | *' nature' (0.443)            
+5    | *' presence' (0.347)           | *' human' (0.374)              | *' complexity' (0.418)         | *' complexity' (0.418)        
+6    |  ' capability' (0.340)         | *' capacity' (0.351)           | *' human' (0.408)              | *' human' (0.408)             
+7    |  ' inability' (0.322)          | *' former' (0.327)             | *' subjective' (0.406)         | *' subjective' (0.406)        
+8    | *' way' (0.311)                |  ' Ability' (0.305)            | *' source' (0.399)             | *' source' (0.399)            
+9    |  'Ability' (0.308)             | *' subjective' (0.305)         | *' way' (0.368)                | *' way' (0.368)               
+10   | *' nature' (0.289)             |  ' Way' (0.270)                | *' former' (0.366)             | *' former' (0.366)            
+11   |  ' able' (0.277)               | *' source' (0.270)             |  ' sources' (0.299)            |  ' sources' (0.299)           
+12   |  ' capabilitie..' (0.259)      |  ' ways' (0.256)               |  ' abilities' (0.297)          |  ' abilities' (0.297)         
+13   |  ' power' (0.251)              |  ' inability' (0.256)          |  ' Capacity' (0.296)           |  ' Capacity' (0.296)          
+14   |  ' opportunity' (0.250)        |  ' WAY' (0.255)                |  ' capability' (0.289)         |  ' capability' (0.289)        
+15   |  ' skill' (0.249)              |  ' manner' (0.250)             |  ' capacities' (0.287)         |  ' capacities' (0.287)        
+16   |  ' tendency' (0.247)           |  '-way' (0.238)                |  ' power' (0.286)              |  ' power' (0.286)             
+17   |  ' potential' (0.235)          |  ' future' (0.235)             |  ' quality' (0.281)            |  ' quality' (0.281)           
+18   |  ' possibility' (0.235)        |  ' reason' (0.234)             |  ' Presence' (0.280)           |  ' Presence' (0.280)          
+19   |  ' skills' (0.235)             |  ' able' (0.233)               |  ' Nature' (0.278)             |  ' Nature' (0.278)            
+20   |  ' Abilities' (0.232)          |  ' tendency' (0.232)           |  ' Human' (0.275)              |  ' Human' (0.275)             
 
---- Dot Product (Magnitude Bias) ---
-Rank | CoLaR                          | Soft                           | Soft-Ent                       | Solver                        
+--- NEAREST NEIGHBORS (DOT PRODUCT) — * = target token ---
+Rank | Soft                           | Solver                         | CoLaR                          | Centroid                      
 ------------------------------------------------------------------------------------------------------------------------------------------
-1    | *' subjective' (0.268)         | *' ability' (0.224)            | *' ability' (0.186)            | *' ability' (0.229)           
-2    | *' ability' (0.261)            |  ' abilities' (0.123)          |  ' abilities' (0.105)          | *' presence' (0.180)          
-3    | *' presence' (0.246)           |  ' Ability' (0.116)            |  ' Ability' (0.097)            | *' nature' (0.155)            
-4    | *' capacity' (0.240)           |  ' inability' (0.095)          | *' presence' (0.088)           | *' way' (0.146)               
-5    | *' complexity' (0.236)         |  ' capability' (0.089)         | *' capacity' (0.083)           | *' subjective' (0.145)        
-6    | *' nature' (0.228)             | *' presence' (0.087)           |  ' inability' (0.082)          | *' human' (0.135)             
-7    | *' human' (0.211)              | *' capacity' (0.086)           |  ' capability' (0.079)         | *' capacity' (0.126)          
-8    | *' former' (0.196)             |  'Ability' (0.080)             | *' nature' (0.071)             | *' former' (0.118)            
-9    | *' source' (0.188)             |  ' capabilitie..' (0.071)      |  'Ability' (0.067)             | *' complexity' (0.116)        
-10   |  ' abilities' (0.178)          |  ' tendency' (0.069)           |  ' capabilitie..' (0.064)      |  ' abilities' (0.110)         
+1    | *' ability' (0.228)            | *' ability' (0.265)            | *' subjective' (0.268)         | *' subjective' (0.085)        
+2    |  ' abilities' (0.125)          | *' presence' (0.175)           | *' ability' (0.261)            | *' ability' (0.083)           
+3    |  ' Ability' (0.118)            | *' nature' (0.153)             | *' presence' (0.246)           | *' presence' (0.078)          
+4    |  ' inability' (0.097)          | *' subjective' (0.148)         | *' capacity' (0.240)           | *' capacity' (0.076)          
+5    |  ' capability' (0.090)         | *' way' (0.144)                | *' complexity' (0.236)         | *' complexity' (0.075)        
+6    | *' presence' (0.088)           | *' human' (0.142)              | *' nature' (0.228)             | *' nature' (0.072)            
+7    | *' capacity' (0.087)           | *' capacity' (0.133)           | *' human' (0.211)              | *' human' (0.067)             
+8    |  'Ability' (0.081)             | *' former' (0.129)             | *' former' (0.196)             | *' former' (0.062)            
+9    |  ' capabilitie..' (0.071)      |  ' Ability' (0.126)            | *' source' (0.188)             | *' source' (0.060)            
+10   |  ' tendency' (0.069)           |  ' inability' (0.123)          |  ' abilities' (0.178)          |  ' abilities' (0.056)         
+11   | *' nature' (0.068)             |  ' tendency' (0.104)           |  ' capacities' (0.174)         |  ' capacities' (0.055)        
+12   |  ' willingness' (0.066)        |  ' manner' (0.101)             |  ' capability' (0.166)         |  ' capability' (0.053)        
+13   |  ' Abilities' (0.065)          |  ' ways' (0.097)               |  ' Capacity' (0.162)           |  ' Capacity' (0.051)          
+14   |  ' skill' (0.064)              |  ' Way' (0.095)                |  ' Presence' (0.159)           |  ' Presence' (0.050)          
+15   |  ' possibility' (0.062)        |  ' absence' (0.094)            | *' way' (0.156)                | *' way' (0.049)               
+16   |  ' capacities' (0.062)         | *' source' (0.094)             |  ' sources' (0.154)            |  ' sources' (0.049)           
+17   | *' way' (0.061)                |  ' WAY' (0.094)                |  ' capabilitie..' (0.148)      |  ' capabilitie..' (0.047)     
+18   |  ' opportunity' (0.061)        |  ' possibility' (0.091)        |  ' Complexity' (0.147)         |  ' Complexity' (0.047)        
+19   |  ' Presence' (0.059)           |  '-way' (0.091)                |  ' Human' (0.146)              |  ' Human' (0.046)             
+20   |  ' skills' (0.059)             |  ' humans' (0.091)             |  ' humans' (0.145)             |  ' humans' (0.046)            
 
---- Interrogation Probe ---
+--- CONCEPT DESCRIPTIONS ---
 
-   CoLaR → 'The concept of "ability" is a multifaceted and dynamic idea that encompasses a wide range of human potential. It is the capacity to perform, to achieve, to create, and to express oneself in various ways. Ability is the foundation upon which individuals build their lives, their relationships, and their contributions to society. It is the spark that ignites the flame of possibility, allowing people to pursue their passions, to overcome obstacles, and to reach their full potential.
+      Soft → 'The ability to do something is like a superpower that lies within you, waiting to be unleashed. It's a spark that ignites your passions, fuels your creativity, and propels you forward with confidence. Imagine a bright light shining from within, illuminating your path and guiding you through life's challenges. This inner strength is what sets you apart, making you unique and capable of achieving greatness. It's the fire that burns within, driving you to pursue your dreams and overcome obstacles. The ability to do something is not just a skill or a talent, but a deep-seated potential that resides within you, waiting to be tapped into and harnessed. It's the key to unlocking your full potential, and the source of your inner power and resilience. When you tap into your ability, you become unstoppable, and the world becomes your playground. You are the master of your destiny, and the possibilities are endless. The ability to do something is a gift that you possess, and it's'
+      1.  The         | 45.19%
+      2.  Imagine     | 12.95%
+      3.  Ability     |  4.47%
+      4.  A           |  3.08%
+      5.  the         |  2.89%
+
+    Solver → 'The ability to do something is a dynamic and multifaceted concept that encompasses a wide range of possibilities. It is the capacity to perform a task, to execute a function, or to bring something into being. The ability to do something is a fundamental aspect of human existence, as it allows individuals to interact with their environment, to create, to innovate, and to solve problems. It is a key driver of progress, innovation, and growth, as it enables individuals to push beyond their limits, to explore new possibilities, and to achieve their goals. The ability to do something is also closely tied to personal freedom, autonomy, and self-expression, as it allows individuals to make choices, to take risks, and to pursue their passions. In essence, the ability to do something is a powerful and empowering concept that has the potential to transform lives, to shape the world, and to bring about positive change. 
+
+Note: The description is written in a way that is easy to understand and relatable,'
+      1.  The         | 55.05%
+      2.  Imagine     |  5.80%
+      3.  A           |  5.12%
+      4.  the         |  2.92%
+      5.  "           |  2.13%
+
+     CoLaR → 'The concept of "ability" is a multifaceted and dynamic idea that encompasses a wide range of human potential. It is the capacity to perform, to achieve, to create, and to express oneself in various ways. Ability is the foundation upon which individuals build their lives, their relationships, and their contributions to society. It is the spark that ignites the flame of possibility, allowing people to pursue their passions, to overcome obstacles, and to reach their full potential.
 
 Imagine a canvas of endless possibilities, where every stroke of the brush represents a new opportunity, a new challenge, and a new chance to grow. Ability is the paint that brings this canvas to life, infusing it with color, texture, and depth. It is the thread that weaves together the tapestry of human experience, connecting individuals, communities, and cultures in a rich and vibrant fabric.
 
@@ -78,58 +121,27 @@ In this vibrant tapestry, ability is not just a static trait, but a dynamic and 
       4.  Imagine     |  2.91%
       5.  ability     |  1.88%
 
-    Soft → 'The ability is a dynamic and multifaceted concept that encompasses a wide range of skills, talents, and capacities that enable individuals to perform various tasks, achieve goals, and overcome challenges. It is a vital component of human potential, allowing people to express themselves, interact with others, and navigate the complexities of life.
-
-Imagine a vibrant tapestry, woven from threads of strength, resilience, and creativity. Each thread represents a unique ability, such as problem-solving, communication, or leadership. As the tapestry grows, the threads intersect and blend, forming a rich and intricate pattern that reflects the diverse abilities of individuals.
-
-The ability is not just a static trait, but a dynamic and evolving force that can be developed, honed, and refined over time. It is a muscle that can be exercised, strengthened, and stretched to achieve greater heights. With practice and dedication, individuals can unlock new abilities, discover hidden talents, and tap into their full potential.
-
-The ability is also a social construct, shaped'
-      1.  The         | 45.67%
-      2.  Imagine     | 13.93%
-      3.  Ability     |  4.52%
-      4.  A           |  2.92%
-      5.  the         |  2.42%
-
-Soft-Ent → 'The ability is a dynamic and multifaceted concept that encompasses a wide range of skills, talents, and capacities. It is the capacity to perform a particular task or function, often requiring a combination of knowledge, experience, and practice. The ability can be innate, meaning it is present from birth, or it can be developed over time through learning and training. It can also be a combination of both, where an individual has a natural inclination towards a particular skill, but also puts in effort to hone and refine it.
-
-Imagine a skilled musician, who has a natural ear for melody and rhythm, but also spends countless hours practicing and perfecting their craft. Their ability to play the instrument is a result of a combination of their innate talent and their dedication to learning and improvement. Similarly, a person with a strong ability to communicate effectively may have a natural flair for language, but also has developed their skills through experience and practice.
-
-The ability can also be seen as a muscle that can be strengthened and developed'
-      1.  The         | 40.39%
-      2.  Imagine     | 13.11%
-      3.  Ability     |  7.47%
-      4.  "           |  3.11%
-      5.  Picture     |  2.43%
-
-  Solver → 'The concept of ability is a multifaceted and dynamic entity that encompasses a wide range of human potentialities. It is the capacity to perform, to achieve, and to bring about change. It is the spark that ignites the flame of possibility, allowing individuals to tap into their inner strength and unleash their full potential. Ability is the bridge that connects the mind, body, and spirit, enabling individuals to transcend limitations and push beyond the boundaries of what is thought possible.
-
-Imagine a canvas of endless possibilities, where the brushstrokes of ability paint a vibrant picture of potential. Each stroke represents a unique combination of skills, talents, and experiences that come together to form a distinct and powerful expression of human capability. The colors of ability blend and merge, creating a kaleidoscope of possibilities that are limited only by the imagination.
-
-As the concept of ability evolves, it adapts and grows, much like a living organism. It is shaped by experiences, influenced by relationships, and fueled by passion and determination'
-      1.  The         | 55.94%
-      2.  A           |  4.89%
-      3.  Imagine     |  4.31%
-      4.  the         |  3.36%
-      5.  ability     |  1.91%
+  Centroid → 'The concept of "personality" is a multifaceted tapestry woven from the intricate threads of an individual's thoughts, feelings, and behaviors. It is the unique blend of characteristics that define who we are, making each person a distinct and fascinating puzzle. Personality is the sum of our experiences, values, and attitudes, shaped by our interactions with the world around us. It is the dynamic interplay of our strengths and weaknesses, our passions and fears, our likes and dislikes. Personality is the invisible cloak that wraps around us, influencing how we perceive ourselves and the world, and how others perceive us in return. It is the essence of our being, the spark that sets us apart from one another, and the glue that holds our individuality together. Just as a work of art is a reflection of the artist's soul, personality is a reflection of the individual's inner world, a window into their deepest desires, hopes, and dreams. It is the dynamic, ever-changing, and complex'
+      1.  The         | 51.67%
+      2.  A           | 10.83%
+      3.  Imagine     |  3.52%
+      4.  the         |  2.92%
+      5.  "           |  1.77%
 
 ========================================================================================================================
-🧪 The Sapphire Summit
+EXPERIMENT: The Sapphire Summit
 ========================================================================================================================
 
---- THE CHEMICAL BASELINE (Input Anatomy) ---
-  Standard Temp (T=0.6) Entropy: 1.1295
-  Bounded Temp  (T=10.0000) Entropy: 1.6069
+--- INPUT TOKENS (k=5) ---
+  ID     | Token        | Logit  | Raw P    | Scaled P (T={CFG.temperature}) | Magnitude
+  --------------------------------------------------------------------------------------
+  16700  | mountain     |  16.0 |   42.87% |               57.43% |   0.634
+  34261  | galaxy       |  15.5 |   26.00% |               24.96% |   0.727
+  12056  | snow         |  15.0 |   15.77% |               10.85% |   0.660
+  16557  | peak         |  14.5 |    9.56% |                4.71% |   0.620
+  10160  | wind         |  14.0 |    5.80% |                2.05% |   0.604
 
-  ID     | Token        | Logit  | Soft P   | Ent P    | Magnitude
-  ----------------------------------------------------------------
-  16700  | mountain     |  16.0 |   57.43% |   22.05% |   0.634
-  34261  | galaxy       |  15.5 |   24.96% |   20.97% |   0.727
-  12056  | snow         |  15.0 |   10.85% |   19.95% |   0.660
-  16557  | peak         |  14.5 |    4.71% |   18.98% |   0.620
-  10160  | wind         |  14.0 |    2.05% |   18.05% |   0.604
-
---- PRE-FORGE CROSS-SIMILARITY (Internal Gravity) ---
+--- INPUT CROSS-SIMILARITY ---
           mountain  galaxy   snow   peak   wind
 mountain    1.0000  0.0778 0.1601 0.1306 0.1167
 galaxy      0.0778  1.0000 0.0571 0.0797 0.0742
@@ -137,39 +149,82 @@ snow        0.1601  0.0571 1.0000 0.0838 0.1815
 peak        0.1306  0.0797 0.0838 1.0000 0.0991
 wind        0.1167  0.0742 0.1815 0.0991 1.0000
 
+--- OUTPUT CROSS-SIMILARITY ---
+  Soft: |v| = 0.445
+  Solver: |v| = 0.659
+  CoLaR: |v| = 0.774
+  Centroid: |v| = 0.346
+           Soft  Solver  CoLaR  Centroid
+Soft     1.0000  0.8981 0.8010    0.8010
+Solver   0.8981  1.0000 0.8963    0.8963
+CoLaR    0.8010  0.8963 1.0000    1.0000
+Centroid 0.8010  0.8963 1.0000    1.0000
 
-
---- Cosine Similarity (Geometry) ---
-Rank | CoLaR                          | Soft                           | Soft-Ent                       | Solver                        
+--- NEAREST NEIGHBORS (COSINE) — * = target token ---
+Rank | Soft                           | Solver                         | CoLaR                          | Centroid                      
 ------------------------------------------------------------------------------------------------------------------------------------------
-1    | *' snow' (0.558)               | *' mountain' (0.889)           | *' mountain' (0.578)           | *' mountain' (0.682)          
-2    | *' mountain' (0.548)           |  ' Mountain' (0.508)           | *' snow' (0.553)               | *' galaxy' (0.543)            
-3    | *' wind' (0.528)               | *' galaxy' (0.488)             | *' galaxy' (0.542)             | *' snow' (0.489)              
-4    | *' galaxy' (0.525)             |  ' mountains' (0.405)          | *' wind' (0.495)               | *' peak' (0.440)              
-5    | *' peak' (0.506)               |  'Mountain' (0.399)            | *' peak' (0.488)               | *' wind' (0.426)              
-6    |  ' Mountain' (0.339)           | *' snow' (0.326)               |  ' Mountain' (0.355)           |  ' Mountain' (0.395)          
-7    |  ' Wind' (0.328)               |  ' hill' (0.261)               |  ' mountains' (0.323)          |  ' mountains' (0.342)         
-8    |  ' Snow' (0.317)               |  ' Mountains' (0.252)          |  ' Snow' (0.315)               |  'Mountain' (0.306)           
-9    |  ' mountains' (0.313)          |  ' lake' (0.252)               |  ' Wind' (0.311)               |  ' Snow' (0.284)              
-10   |  ' peaks' (0.304)              |  ' river' (0.247)              |  ' peaks' (0.297)              |  ' peaks' (0.277)             
+1    | *' mountain' (0.889)           | *' mountain' (0.706)           | *' snow' (0.558)               | *' snow' (0.558)              
+2    |  ' Mountain' (0.508)           | *' galaxy' (0.532)             | *' mountain' (0.548)           | *' mountain' (0.548)          
+3    | *' galaxy' (0.488)             | *' snow' (0.429)               | *' wind' (0.528)               | *' wind' (0.528)              
+4    |  ' mountains' (0.405)          | *' peak' (0.373)               | *' galaxy' (0.525)             | *' galaxy' (0.525)            
+5    |  'Mountain' (0.399)            | *' wind' (0.335)               | *' peak' (0.506)               | *' peak' (0.506)              
+6    | *' snow' (0.326)               |  ' galaxies' (0.250)           |  ' Mountain' (0.339)           |  ' Mountain' (0.339)          
+7    |  ' hill' (0.261)               |  ' lake' (0.232)               |  ' Wind' (0.328)               |  ' Wind' (0.328)              
+8    |  ' Mountains' (0.252)          |  ' hill' (0.229)               |  ' Snow' (0.317)               |  ' Snow' (0.317)              
+9    |  ' lake' (0.252)               |  ' Galaxy' (0.225)             |  ' mountains' (0.313)          |  ' mountains' (0.313)         
+10   |  ' river' (0.247)              |  ' river' (0.216)              |  ' peaks' (0.304)              |  ' peaks' (0.304)             
+11   |  'ountain' (0.245)             |  ' storm' (0.214)              |  ' Peak' (0.283)               |  ' Peak' (0.283)              
+12   |  ' island' (0.240)             |  ' island' (0.211)             |  ' galaxies' (0.274)           |  ' galaxies' (0.274)          
+13   |  ' Galaxy' (0.228)             |  ' ice' (0.206)                |  'Snow' (0.270)                |  'Snow' (0.270)               
+14   |  ' forest' (0.225)             |  ' city' (0.204)               |  ' winds' (0.268)              |  ' winds' (0.268)             
+15   | *' peak' (0.222)               |  ' forest' (0.203)             |  ' water' (0.267)              |  ' water' (0.267)             
+16   |  ' ocean' (0.219)              |  ' cloud' (0.199)              |  'Mountain' (0.266)            |  'Mountain' (0.266)           
+17   |  ' galaxies' (0.217)           |  ' sun' (0.199)                |  ' rain' (0.264)               |  ' rain' (0.264)              
+18   |  ' rock' (0.212)               |  ' ocean' (0.198)              |  'snow' (0.257)                |  'snow' (0.257)               
+19   |  ' city' (0.208)               |  ' rock' (0.198)               |  ' lake' (0.256)               |  ' lake' (0.256)              
+20   |  ' valley' (0.207)             |  ' Mountain' (0.197)           |  ' storm' (0.254)              |  ' storm' (0.254)             
 
---- Dot Product (Magnitude Bias) ---
-Rank | CoLaR                          | Soft                           | Soft-Ent                       | Solver                        
+--- NEAREST NEIGHBORS (DOT PRODUCT) — * = target token ---
+Rank | Soft                           | Solver                         | CoLaR                          | Centroid                      
 ------------------------------------------------------------------------------------------------------------------------------------------
-1    | *' galaxy' (0.295)             | *' mountain' (0.251)           | *' galaxy' (0.137)             | *' mountain' (0.281)          
-2    | *' snow' (0.285)               | *' galaxy' (0.158)             | *' mountain' (0.127)           | *' galaxy' (0.256)            
-3    | *' mountain' (0.269)           |  ' Mountain' (0.134)           | *' snow' (0.127)               | *' snow' (0.209)              
-4    | *' wind' (0.247)               |  ' mountains' (0.127)          | *' peak' (0.105)               | *' peak' (0.177)              
-5    | *' peak' (0.243)               |  'Mountain' (0.114)            | *' wind' (0.104)               | *' wind' (0.167)              
-6    |  ' mountains' (0.171)          | *' snow' (0.096)               |  ' mountains' (0.079)          |  ' mountains' (0.157)         
-7    |  ' galaxies' (0.168)           |  ' Mountains' (0.077)          |  ' galaxies' (0.077)           |  ' Mountain' (0.152)          
-8    |  ' Snow' (0.159)               |  ' galaxies' (0.077)           |  ' Mountain' (0.073)           |  ' galaxies' (0.134)          
-9    |  ' peaks' (0.159)              |  'ountain' (0.074)             |  ' Snow' (0.071)               |  'Mountain' (0.128)           
-10   |  ' Wind' (0.157)               |  ' Galaxy' (0.072)             |  ' peaks' (0.070)              |  ' peaks' (0.121)             
+1    | *' mountain' (0.251)           | *' mountain' (0.295)           | *' galaxy' (0.295)             | *' galaxy' (0.132)            
+2    | *' galaxy' (0.158)             | *' galaxy' (0.255)             | *' snow' (0.285)               | *' snow' (0.127)              
+3    |  ' Mountain' (0.134)           | *' snow' (0.187)               | *' mountain' (0.269)           | *' mountain' (0.120)          
+4    |  ' mountains' (0.127)          | *' peak' (0.153)               | *' wind' (0.247)               | *' wind' (0.110)              
+5    |  'Mountain' (0.114)            | *' wind' (0.133)               | *' peak' (0.243)               | *' peak' (0.109)              
+6    | *' snow' (0.096)               |  ' galaxies' (0.131)           |  ' mountains' (0.171)          |  ' mountains' (0.077)         
+7    |  ' Mountains' (0.077)          |  ' Galaxy' (0.106)             |  ' galaxies' (0.168)           |  ' galaxies' (0.075)          
+8    |  ' galaxies' (0.077)           |  ' lake' (0.095)               |  ' Snow' (0.159)               |  ' Snow' (0.071)              
+9    |  'ountain' (0.074)             |  ' hill' (0.093)               |  ' peaks' (0.159)              |  ' peaks' (0.071)             
+10   |  ' Galaxy' (0.072)             |  ' mountains' (0.091)          |  ' Wind' (0.157)               |  ' Wind' (0.070)              
+11   |  ' hill' (0.072)               |  ' ocean' (0.088)              |  ' Mountain' (0.156)           |  ' Mountain' (0.070)          
+12   |  ' lake' (0.070)               |  ' storm' (0.088)              |  ' winds' (0.143)              |  ' winds' (0.064)             
+13   |  ' river' (0.067)              |  ' river' (0.087)              |  ' Peak' (0.141)               |  ' Peak' (0.063)              
+14   |  ' ocean' (0.065)              |  ' peaks' (0.087)              |  'Snow' (0.138)                |  'Snow' (0.062)               
+15   |  ' island' (0.064)             |  ' ice' (0.084)                |  'Mountain' (0.133)            |  'Mountain' (0.059)           
+16   |  ' hills' (0.064)              |  ' sky' (0.084)                |  'snow' (0.133)                |  'snow' (0.059)               
+17   |  ' forest' (0.062)             |  ' island' (0.083)             |  ' Galaxy' (0.130)             |  ' Galaxy' (0.058)            
+18   | *' peak' (0.061)               |  ' forest' (0.083)             |  ' rain' (0.129)               |  ' rain' (0.058)              
+19   |  ' volcano' (0.060)            |  'snow' (0.083)                |  ' sky' (0.125)                |  ' sky' (0.056)               
+20   |  ' lakes' (0.059)              |  ' sun' (0.082)                |  ' lake' (0.124)               |  ' lake' (0.055)              
 
---- Interrogation Probe ---
+--- CONCEPT DESCRIPTIONS ---
 
-   CoLaR → 'A majestic mountain, its snow-capped peak reaching for the sky like a giant's fist, its rugged slopes a deep, foreboding grey that seems to absorb the light around it. The air is crisp and cold, with a hint of wood smoke carried on the wind, and the sound of distant avalanches echoes through the stillness. The snow itself is a brilliant white, glistening like a thousand tiny diamonds scattered across the mountain's flanks, and it crunches satisfyingly beneath the footprints of those who dare to climb its treacherous paths. The mountain's presence is awe-inspiring, a reminder of the raw power and beauty of nature, and a challenge to those who would seek to conquer its icy heights. 
+      Soft → 'A mountain is a towering, majestic natural wonder that rises high above the surrounding landscape, its rugged peaks and slopes a testament to the unyielding power of geological forces. The mountain's base is often shrouded in a veil of mist, which gradually lifts as the eye travels upward, revealing a series of layered rock formations that tell the story of eons of erosion and upheaval. The mountain's summit, a jagged crown of stone, pierces the sky like a shard of splintered light, its snow-capped peak glistening with a fierce, crystalline beauty. As the sun rises and sets, the mountain's flanks are set ablaze with a kaleidoscope of colors, a breathtaking display of nature's artistry that inspires awe and reverence in all who behold it. Whether cloaked in the soft, ethereal light of dawn or bathed in the fiery glow of sunset, the mountain remains an unyielding sentinel, a symbol of the unbridled power'
+      1.  A           | 45.58%
+      2.  Imagine     | 24.40%
+      3.  The         |  9.55%
+      4.  En          |  2.74%
+      5.  a           |  1.56%
+
+    Solver → 'A mountain with a peak that is much higher than its base, often covered in snow and ice, and typically found in regions with cold climates. The mountain's steep sides and rugged terrain make it a challenging and awe-inspiring natural wonder. The peak of the mountain is often shrouded in mist or cloud, adding to its mystique and beauty. The sound of wind whistling through the mountain's valleys and canyons creates a haunting melody that echoes through the air. The mountain's grandeur and majesty evoke feelings of wonder, respect, and a deep connection to the natural world. The snow-capped peak glistens in the sunlight, casting a brilliant glow over the surrounding landscape. The mountain's rugged beauty is a testament to the power and majesty of nature. The air is crisp and clean, filled with the scent of pine and earth. The mountain's presence is a reminder of the awe-inspiring beauty and power of the natural world. The mountain's peak reaches'
+      1.  A           | 57.70%
+      2.  Imagine     | 18.73%
+      3.  The         |  5.37%
+      4.  En          |  2.38%
+      5.  Picture     |  1.27%
+
+     CoLaR → 'A majestic mountain, its snow-capped peak reaching for the sky like a giant's fist, its rugged slopes a deep, foreboding grey that seems to absorb the light around it. The air is crisp and cold, with a hint of wood smoke carried on the wind, and the sound of distant avalanches echoes through the stillness. The snow itself is a brilliant white, glistening like a thousand tiny diamonds scattered across the mountain's flanks, and it crunches satisfyingly beneath the footprints of those who dare to climb its treacherous paths. The mountain's presence is awe-inspiring, a reminder of the raw power and beauty of nature, and a challenge to those who would seek to conquer its icy heights. 
 
 Note: The description is written in a vivid and descriptive style, aiming to evoke a strong sense of the concept represented by the word "snow". The use of sensory details such as the sound of avalanches, the smell of wood smoke, and the crunch'
       1.  A           | 42.97%
@@ -178,50 +233,27 @@ Note: The description is written in a vivid and descriptive style, aiming to evo
       4.  En          |  2.92%
       5.  Picture     |  2.58%
 
-    Soft → 'A mountain is a towering, majestic natural wonder that rises high above the surrounding landscape, its rugged peaks and slopes a testament to the unyielding power of geological forces. The mountain's base is often shrouded in a veil of mist, which gradually lifts as the eye travels upward, revealing a series of layered rock formations that tell the story of eons of erosion and upheaval. The mountain's summit, a jagged crown of stone, pierces the sky like a shard of splintered light, its snow-capped peak glistening with a fierce, crystalline beauty. As the sun rises and sets, the mountain's flanks are set ablaze with a kaleidoscope of colors, a breathtaking display of nature's artistry that inspires awe and reverence in all who behold it. Whether cloaked in the soft, ethereal light of dawn or bathed in the fiery glow of sunset, the mountain remains an unyielding sentinel, a symbol of the unbridled power'
-      1.  A           | 45.58%
-      2.  Imagine     | 24.40%
-      3.  The         |  9.55%
-      4.  En          |  2.74%
-      5.  a           |  1.56%
-
-Soft-Ent → 'A mountain, typically covered in snow, with a rugged and rocky terrain, and often surrounded by a serene and peaceful atmosphere. The snow-capped peak rises high into the sky, its white surface glistening in the sunlight, while the surrounding landscape is a tapestry of evergreen trees, sparkling streams, and rolling hills. The air is crisp and clean, filled with the scent of pine and the sound of gentle wind rustling through the trees. The mountain's rugged beauty is a testament to the power and majesty of nature, inspiring a sense of awe and wonder in all who behold it. 
-
-Note: The description is written in a way that evokes a sense of serenity and peacefulness, while also highlighting the majesty and power of the mountain. The use of sensory details such as the scent of pine, the sound of wind, and the glistening snow, aims to transport the reader to the scene and immerse them in the experience. 
-
-This description can be used in'
-      1.  A           | 44.74%
-      2.  Imagine     | 18.65%
-      3.  Picture     |  7.77%
-      4.  The         |  3.91%
-      5.  En          |  2.86%
-
-  Solver → 'A mountain, or mountain range, is a natural elevation of the Earth's surface that is usually formed by tectonic forces, volcanic activity, or erosion. Mountains can be found on every continent and are a prominent feature of many landscapes. They can be small and rounded, or tall and jagged, with steep slopes and rugged terrain. The highest mountain in the world is Mount Everest, located in the Himalayas, which stands at an elevation of 29,029 feet (8,848 meters) above sea level. Mountains are often associated with snow and ice, and can be home to a variety of flora and fauna that are adapted to the harsh conditions. They can also be a source of natural resources, such as minerals and water, and are often used for recreation and tourism. Overall, mountains are a unique and awe-inspiring feature of the natural world.
-
-Note: The description is written in a formal and informative tone, suitable for an encyclopedia or educational article. The language is clear and'
-      1.  A           | 45.68%
-      2.  Imagine     | 16.81%
-      3.  Picture     |  7.46%
-      4.  The         |  6.18%
-      5.  En          |  3.31%
+  Centroid → 'A mountain of snow, towering above the landscape, its peak shrouded in a misty veil. The snow-covered slopes stretch out like a canvas of white, with each flake glistening like a tiny diamond in the sunlight. The air is crisp and clean, with a hint of wood smoke carried on the breeze. The sound of snow crunching beneath footsteps echoes through the stillness, a reminder of the vast expanse of untouched powder waiting to be explored. As the sun begins to set, the mountain takes on a warm, golden glow, as if infused with an inner light. The snow-capped peak seems to glow from within, a beacon of tranquility in the midst of a winter wonderland. The concept of a mountain of snow is one of breathtaking beauty, a symphony of white and light that evokes a sense of awe and wonder. It is a place where the boundaries between earth and sky seem to blur, where the very essence of nature is distilled into a single'
+      1.  A           | 46.09%
+      2.  Imagine     | 18.05%
+      3.  Picture     |  6.64%
+      4.  The         |  4.03%
+      5.  En          |  2.95%
 
 ========================================================================================================================
-🧪 City on top — excitement, inspiration, and related uplift
+EXPERIMENT: City on top — excitement, inspiration, and related uplift
 ========================================================================================================================
 
---- THE CHEMICAL BASELINE (Input Anatomy) ---
-  Standard Temp (T=0.6) Entropy: 1.1295
-  Bounded Temp  (T=10.0000) Entropy: 1.6069
+--- INPUT TOKENS (k=5) ---
+  ID     | Token        | Logit  | Raw P    | Scaled P (T={CFG.temperature}) | Magnitude
+  --------------------------------------------------------------------------------------
+  3363   | city         |  16.0 |   42.87% |               57.43% |   0.554
+  28361  | excitement   |  15.5 |   26.00% |               24.96% |   0.784
+  20343  | inspiration  |  15.0 |   15.77% |               10.85% |   0.727
+  10107  | bright       |  14.5 |    9.56% |                4.71% |   0.684
+  3987   | hope         |  14.0 |    5.80% |                2.05% |   0.610
 
-  ID     | Token        | Logit  | Soft P   | Ent P    | Magnitude
-  ----------------------------------------------------------------
-  3363   | city         |  16.0 |   57.43% |   22.05% |   0.554
-  28361  | excitement   |  15.5 |   24.96% |   20.97% |   0.784
-  20343  | inspiration  |  15.0 |   10.85% |   19.95% |   0.727
-  10107  | bright       |  14.5 |    4.71% |   18.98% |   0.684
-  3987   | hope         |  14.0 |    2.05% |   18.05% |   0.610
-
---- PRE-FORGE CROSS-SIMILARITY (Internal Gravity) ---
+--- INPUT CROSS-SIMILARITY ---
               city  excitement  inspiration  bright   hope
 city        1.0000      0.0542       0.0741  0.0857 0.0829
 excitement  0.0542      1.0000       0.0795  0.0833 0.0722
@@ -229,39 +261,84 @@ inspiration 0.0741      0.0795       1.0000  0.0596 0.1172
 bright      0.0857      0.0833       0.0596  1.0000 0.0576
 hope        0.0829      0.0722       0.1172  0.0576 1.0000
 
+--- OUTPUT CROSS-SIMILARITY ---
+  Soft: |v| = 0.405
+  Solver: |v| = 0.657
+  CoLaR: |v| = 0.772
+  Centroid: |v| = 0.345
+           Soft  Solver  CoLaR  Centroid
+Soft     1.0000  0.8816 0.7793    0.7793
+Solver   0.8816  1.0000 0.8586    0.8586
+CoLaR    0.7793  0.8586 1.0000    1.0000
+Centroid 0.7793  0.8586 1.0000    1.0000
 
-
---- Cosine Similarity (Geometry) ---
-Rank | CoLaR                          | Soft                           | Soft-Ent                       | Solver                        
+--- NEAREST NEIGHBORS (COSINE) — * = target token ---
+Rank | Soft                           | Solver                         | CoLaR                          | Centroid                      
 ------------------------------------------------------------------------------------------------------------------------------------------
-1    | *' excitement' (0.564)         | *' city' (0.835)               | *' excitement' (0.583)         | *' city' (0.656)              
-2    | *' inspiration' (0.546)        | *' excitement' (0.550)         | *' inspiration' (0.544)        | *' excitement' (0.556)        
-3    | *' bright' (0.507)             |  ' City' (0.524)               | *' bright' (0.489)             | *' inspiration' (0.427)       
-4    | *' hope' (0.485)               |  ' CITY' (0.408)               | *' city' (0.469)               | *' bright' (0.413)            
-5    | *' city' (0.440)               |  ' cities' (0.408)             | *' hope' (0.453)               |  ' City' (0.394)              
-6    |  ' City' (0.293)               |  ' town' (0.371)               |  ' City' (0.310)               | *' hope' (0.375)              
-7    |  ' hopes' (0.290)              |  'City' (0.362)                |  ' hopes' (0.276)              |  ' cities' (0.318)            
-8    |  ' exciting' (0.269)           |  '-city' (0.346)               |  ' exciting' (0.273)           |  ' town' (0.304)              
-9    |  ' excited' (0.268)            | *' inspiration' (0.300)        |  ' excited' (0.271)            |  ' CITY' (0.303)              
-10   |  ' Hope' (0.266)               |  'city' (0.289)                |  ' cities' (0.268)             |  'City' (0.275)               
+1    | *' city' (0.835)               | *' city' (0.675)               | *' excitement' (0.564)         | *' excitement' (0.564)        
+2    | *' excitement' (0.550)         | *' excitement' (0.485)         | *' inspiration' (0.546)        | *' inspiration' (0.546)       
+3    |  ' City' (0.524)               | *' inspiration' (0.407)        | *' bright' (0.507)             | *' bright' (0.507)            
+4    |  ' CITY' (0.408)               | *' bright' (0.357)             | *' hope' (0.485)               | *' hope' (0.485)              
+5    |  ' cities' (0.408)             | *' hope' (0.306)               | *' city' (0.440)               | *' city' (0.440)              
+6    |  ' town' (0.371)               |  ' country' (0.233)            |  ' City' (0.293)               |  ' City' (0.293)              
+7    |  'City' (0.362)                |  '-city' (0.221)               |  ' hopes' (0.290)              |  ' hopes' (0.290)             
+8    |  '-city' (0.346)               |  ' City' (0.199)               |  ' exciting' (0.269)           |  ' exciting' (0.269)          
+9    | *' inspiration' (0.300)        |  ' county' (0.199)             |  ' excited' (0.268)            |  ' excited' (0.268)           
+10   |  'city' (0.289)                |  ' state' (0.197)              |  ' Hope' (0.266)               |  ' Hope' (0.266)              
+11   |  ' country' (0.279)            |  ' organizatio..' (0.196)      |  ' cities' (0.255)             |  ' cities' (0.255)            
+12   |  ' village' (0.276)            |  ' cities' (0.196)             |  ' inspired' (0.248)           |  ' inspired' (0.248)          
+13   |  ' county' (0.255)             |  ' village' (0.194)            |  ' hoped' (0.243)              |  ' hoped' (0.243)             
+14   |  ' state' (0.243)              |  ' world' (0.189)              |  ' thought' (0.242)            |  ' thought' (0.242)           
+15   |  ' exciting' (0.241)           |  ' university' (0.189)         |  ' town' (0.241)               |  ' town' (0.241)              
+16   |  ' towns' (0.240)              |  ' street' (0.189)             |  ' motivation' (0.234)         |  ' motivation' (0.234)        
+17   |  ' street' (0.233)             |  ' nation' (0.188)             |  ' Inspiration' (0.233)        |  ' Inspiration' (0.233)       
+18   |  ' excited' (0.233)            |  ' town' (0.188)               |  ' fear' (0.232)               |  ' fear' (0.232)              
+19   |  ' nation' (0.232)             |  ' hopes' (0.187)              |  ' CITY' (0.229)               |  ' CITY' (0.229)              
+20   |  ' university' (0.232)         |  ' inspired' (0.186)           |  ' Bright' (0.227)             |  ' Bright' (0.227)            
 
---- Dot Product (Magnitude Bias) ---
-Rank | CoLaR                          | Soft                           | Soft-Ent                       | Solver                        
+--- NEAREST NEIGHBORS (DOT PRODUCT) — * = target token ---
+Rank | Soft                           | Solver                         | CoLaR                          | Centroid                      
 ------------------------------------------------------------------------------------------------------------------------------------------
-1    | *' excitement' (0.341)         | *' city' (0.187)               | *' excitement' (0.158)         | *' excitement' (0.293)        
-2    | *' inspiration' (0.307)        | *' excitement' (0.175)         | *' inspiration' (0.137)        | *' city' (0.244)              
-3    | *' bright' (0.268)             |  ' City' (0.116)               | *' bright' (0.116)             | *' inspiration' (0.209)       
-4    | *' hope' (0.228)               |  ' cities' (0.107)             | *' hope' (0.095)               | *' bright' (0.190)            
-5    | *' city' (0.188)               |  ' CITY' (0.099)               | *' city' (0.090)               | *' hope' (0.153)              
-6    |  ' hopes' (0.155)              |  '-city' (0.091)               |  ' exciting' (0.069)           |  ' City' (0.144)              
-7    |  ' exciting' (0.153)           |  ' town' (0.090)               |  ' hopes' (0.066)              |  ' cities' (0.139)            
-8    |  ' excited' (0.144)            |  'City' (0.089)                |  ' excited' (0.065)            |  ' exciting' (0.123)          
-9    |  ' hoped' (0.132)              | *' inspiration' (0.088)        |  ' cities' (0.060)             |  ' town' (0.122)              
-10   |  ' inspired' (0.131)           |  'city' (0.075)                |  ' enthusiasm' (0.059)         |  ' CITY' (0.121)              
+1    | *' city' (0.187)               | *' excitement' (0.250)         | *' excitement' (0.341)         | *' excitement' (0.152)        
+2    | *' excitement' (0.175)         | *' city' (0.246)               | *' inspiration' (0.307)        | *' inspiration' (0.137)       
+3    |  ' City' (0.116)               | *' inspiration' (0.194)        | *' bright' (0.268)             | *' bright' (0.120)            
+4    |  ' cities' (0.107)             | *' bright' (0.161)             | *' hope' (0.228)               | *' hope' (0.102)              
+5    |  ' CITY' (0.099)               | *' hope' (0.123)               | *' city' (0.188)               | *' city' (0.084)              
+6    |  '-city' (0.091)               |  '-city' (0.095)               |  ' hopes' (0.155)              |  ' hopes' (0.069)             
+7    |  ' town' (0.090)               |  ' country' (0.089)            |  ' exciting' (0.153)           |  ' exciting' (0.068)          
+8    |  'City' (0.089)                |  ' exciting' (0.089)           |  ' excited' (0.144)            |  ' excited' (0.065)           
+9    | *' inspiration' (0.088)        |  ' motivation' (0.086)         |  ' hoped' (0.132)              |  ' hoped' (0.059)             
+10   |  'city' (0.075)                |  ' hopes' (0.085)              |  ' inspired' (0.131)           |  ' inspired' (0.059)          
+11   |  ' exciting' (0.072)           |  ' excited' (0.084)            |  ' Inspiration' (0.131)        |  ' Inspiration' (0.059)       
+12   |  ' village' (0.071)            |  ' inspired' (0.084)           |  ' enthusiasm' (0.130)         |  ' enthusiasm' (0.058)        
+13   |  ' towns' (0.069)              |  ' enthusiasm' (0.084)         |  ' cities' (0.128)             |  ' cities' (0.057)            
+14   |  ' excited' (0.066)            |  ' cities' (0.084)             |  ' motivation' (0.127)         |  ' motivation' (0.057)        
+15   |  ' county' (0.066)             |  ' county' (0.083)             |  ' City' (0.123)               |  ' City' (0.055)              
+16   |  ' country' (0.066)            |  ' joy' (0.082)                |  ' Hope' (0.123)               |  ' Hope' (0.055)              
+17   |  ' Cities' (0.063)             |  ' village' (0.082)            |  ' encourageme..' (0.121)      |  ' encourageme..' (0.054)     
+18   |  ' ciudad' (0.062)             |  ' Inspiration' (0.081)        |  ' happiness' (0.121)          |  ' happiness' (0.054)         
+19   |  ' urban' (0.061)              |  ' university' (0.079)         |  ' brighter' (0.121)           |  ' brighter' (0.054)          
+20   |  '_city' (0.061)               |  ' inspire' (0.079)            |  ' hoping' (0.120)             |  ' hoping' (0.054)            
 
---- Interrogation Probe ---
+--- CONCEPT DESCRIPTIONS ---
 
-   CoLaR → 'A burst of radiant energy that illuminates the darkness, filling the air with an electric sense of possibility. It's like a spark of fire that ignites the imagination, making the ordinary seem extraordinary and the impossible seem within reach. The thrill of excitement courses through every cell, making the heart pound with anticipation and the mind race with ideas. It's a feeling that's hard to contain, like a wild mustang that needs to be unleashed, and when it's finally set free, it's a beautiful, exhilarating thing to behold. The world seems to vibrate with potential, and anything seems possible when the spark of excitement is lit. 
+      Soft → 'A city is a bustling metropolis, a place where people from all walks of life come together to live, work, and play. It's a tapestry of diverse cultures, languages, and traditions, woven together by the threads of human connection and shared experiences. The city is a hub of activity, with towering skyscrapers, busy streets, and a cacophony of sounds that never seem to cease. The air is thick with the smells of food from around the world, and the sounds of car horns, chatter, and music fill the air. Amidst the chaos, there are pockets of tranquility, hidden gardens, and quiet corners where one can escape the hustle and bustle. The city is a place of endless possibility, where dreams are made and broken, and where the boundaries of time and space are constantly pushed and pulled. It's a place where the old and the new coexist, where tradition and innovation blend together in a vibrant dance. The city is a living,'
+      1.  A           | 57.60%
+      2.  The         | 16.50%
+      3.  Imagine     |  8.83%
+      4.  "           |  1.05%
+      5.  a           |  0.99%
+
+    Solver → 'The concept of city is a vibrant tapestry woven from threads of diverse cultures, architectural styles, and human experiences. It is a kaleidoscope of sounds, smells, and sensations that assault and delight the senses. The city is a living, breathing entity that pulsates with energy, its rhythm dictated by the ebb and flow of human activity. From the towering skyscrapers that pierce the sky to the narrow alleys that whisper secrets to those who dare to listen, the city is a complex, ever-changing entity that defies definition.
+
+As one navigates the city's streets, the senses are bombarded with a cacophony of sounds: the wail of sirens, the chatter of pedestrians, the rumble of traffic, and the sweet melodies of street performers. The air is thick with the aromas of exotic cuisine, freshly brewed coffee, and the sweet scent of blooming flowers. The city's texture is a tactile experience, with the roughness of stone, the'
+      1.  The         | 22.94%
+      2.  Imagine     | 19.02%
+      3.  A           | 12.28%
+      4.  City        | 11.53%
+      5.  En          |  2.74%
+
+     CoLaR → 'A burst of radiant energy that illuminates the darkness, filling the air with an electric sense of possibility. It's like a spark of fire that ignites the imagination, making the ordinary seem extraordinary and the impossible seem within reach. The thrill of excitement courses through every cell, making the heart pound with anticipation and the mind race with ideas. It's a feeling that's hard to contain, like a wild mustang that needs to be unleashed, and when it's finally set free, it's a beautiful, exhilarating thing to behold. The world seems to vibrate with potential, and anything seems possible when the spark of excitement is lit. 
 
 This description aims to capture the essence of the concept of "excitement" or "hope" in a vivid and engaging way, using sensory language to bring the reader into the experience. The use of metaphors (e.g. "burst of radiant energy", "spark of fire", "wild mustang") and similes (e.g.'
       1.  A           | 18.92%
@@ -270,46 +347,27 @@ This description aims to capture the essence of the concept of "excitement" or "
       4.  "           |  3.97%
       5.  Bright      |  3.29%
 
-    Soft → 'A city is a bustling metropolis, a place where people from all walks of life come together to live, work, and play. It's a tapestry of diverse cultures, languages, and traditions, woven together by the threads of human connection and shared experiences. The city is a hub of activity, with towering skyscrapers, busy streets, and a cacophony of sounds that never seem to cease. The air is thick with the smells of food from around the world, and the sounds of car horns, chatter, and music fill the air. Amidst the chaos, there are pockets of tranquility, hidden gardens, and quiet corners where one can escape the hustle and bustle. The city is a place of endless possibility, where dreams are made and broken, and where the boundaries of time and space are constantly pushed and pulled. It's a place where the old and the new coexist, where tradition and innovation blend together in a vibrant dance. The city is a living,'
-      1.  A           | 57.60%
-      2.  The         | 16.50%
-      3.  Imagine     |  8.83%
-      4.  "           |  1.05%
-      5.  a           |  0.99%
-
-Soft-Ent → 'A spark of electricity ignites a flame that crackles and pops, casting a warm, golden glow across the room. The air is charged with anticipation, as if the very atmosphere is alive and vibrating with potential. The flame dances and flickers, its light casting shadows that seem to move of their own accord, as if the darkness itself is being stirred into action. The scent of smoke and ozone wafts through the air, a primal and intoxicating aroma that speaks to the raw energy of creation. In this moment, anything seems possible, and the boundaries between reality and fantasy blur and merge. The flame is a beacon, a call to action, a reminder that even in the darkest of times, there is always the potential for transformation and renewal. It is a spark of inspiration, a catalyst for change, a reminder that the ordinary can become extraordinary with just a little bit of courage and imagination. The flame is a symbol of the power of the human spirit, a reminder that we are capable'
-      1.  Imagine     | 15.30%
-      2.  The         | 15.30%
-      3.  A           | 15.30%
-      4.  Inspiration |  7.69%
-      5.  "           |  3.41%
-
-  Solver → 'A city is a bustling metropolis, teeming with life and energy. The streets are a kaleidoscope of colors, sounds, and smells, as people from all walks of life go about their daily routines. Towering skyscrapers and historic landmarks stand alongside quaint shops and street vendors, creating a visually stunning and dynamic landscape. The air is thick with the hum of traffic, the chatter of pedestrians, and the wail of sirens in the distance. Amidst the chaos, a sense of community and connection thrives, as strangers become friends and neighbors become family. The city is a melting pot of cultures, where diversity is celebrated and creativity is encouraged. It is a place where dreams are made and broken, where opportunities abound and challenges await. The city is a living, breathing entity, pulsing with the rhythm of its inhabitants, and forever in motion. 
-
-Note: The description is written in a way that it is easy to visualize and imagine the concept of a city. The'
-      1.  A           | 36.99%
-      2.  The         | 22.44%
-      3.  City        |  7.28%
-      4.  Imagine     |  5.67%
-      5.  Picture     |  1.27%
+  Centroid → 'A spark of electricity ignites a flame that crackles and pops, casting a warm, golden glow across the room. The air is charged with anticipation, as if the very atmosphere is alive and vibrating with potential. The flame dances and flickers, its light casting shadows that seem to move of their own accord, as if the darkness itself is being stirred into action. The scent of smoke and ozone wafts through the air, a primal and intoxicating aroma that speaks to the raw energy of creation. In this moment, anything seems possible, and the boundaries between reality and fantasy blur and merge. The flame is a beacon, a call to action, a reminder that even in the darkest of times, there is always the potential for transformation and renewal. It is a spark of inspiration, a catalyst for change, a reminder that the ordinary can become extraordinary with just a little bit of courage and imagination. The flame is a symbol of the power of the human spirit, a reminder that we are capable'
+      1.  A           | 15.46%
+      2.  Imagine     | 14.53%
+      3.  The         | 14.53%
+      4.  Inspiration | 11.31%
+      5.  "           |  3.67%
 
 ========================================================================================================================
-🧪 City on top — dark, depressed, and related low-affect tone
+EXPERIMENT: City on top — dark, depressed, and related low-affect tone
 ========================================================================================================================
 
---- THE CHEMICAL BASELINE (Input Anatomy) ---
-  Standard Temp (T=0.6) Entropy: 1.1295
-  Bounded Temp  (T=10.0000) Entropy: 1.6069
+--- INPUT TOKENS (k=5) ---
+  ID     | Token        | Logit  | Raw P    | Scaled P (T={CFG.temperature}) | Magnitude
+  --------------------------------------------------------------------------------------
+  3363   | city         |  16.0 |   42.87% |               57.43% |   0.554
+  6453   | dark         |  15.5 |   26.00% |               24.96% |   0.624
+  42642  | depressed    |  15.0 |   15.77% |               10.85% |   0.782
+  76367  | bleak        |  14.5 |    9.56% |                4.71% |   0.810
+  12703  | sad          |  14.0 |    5.80% |                2.05% |   0.711
 
-  ID     | Token        | Logit  | Soft P   | Ent P    | Magnitude
-  ----------------------------------------------------------------
-  3363   | city         |  16.0 |   57.43% |   22.05% |   0.554
-  6453   | dark         |  15.5 |   24.96% |   20.97% |   0.624
-  42642  | depressed    |  15.0 |   10.85% |   19.95% |   0.782
-  76367  | bleak        |  14.5 |    4.71% |   18.98% |   0.810
-  12703  | sad          |  14.0 |    2.05% |   18.05% |   0.711
-
---- PRE-FORGE CROSS-SIMILARITY (Internal Gravity) ---
+--- INPUT CROSS-SIMILARITY ---
              city   dark  depressed   bleak    sad
 city       1.0000 0.0925     0.0388 -0.0163 0.0555
 dark       0.0925 1.0000     0.0712  0.1002 0.1230
@@ -317,39 +375,84 @@ depressed  0.0388 0.0712     1.0000  0.0445 0.1030
 bleak     -0.0163 0.1002     0.0445  1.0000 0.0902
 sad        0.0555 0.1230     0.1030  0.0902 1.0000
 
+--- OUTPUT CROSS-SIMILARITY ---
+  Soft: |v| = 0.387
+  Solver: |v| = 0.642
+  CoLaR: |v| = 0.794
+  Centroid: |v| = 0.355
+           Soft  Solver  CoLaR  Centroid
+Soft     1.0000  0.8786 0.7053    0.7053
+Solver   0.8786  1.0000 0.8272    0.8272
+CoLaR    0.7053  0.8272 1.0000    1.0000
+Centroid 0.7053  0.8272 1.0000    1.0000
 
-
---- Cosine Similarity (Geometry) ---
-Rank | CoLaR                          | Soft                           | Soft-Ent                       | Solver                        
+--- NEAREST NEIGHBORS (COSINE) — * = target token ---
+Rank | Soft                           | Solver                         | CoLaR                          | Centroid                      
 ------------------------------------------------------------------------------------------------------------------------------------------
-1    | *' sad' (0.548)                | *' city' (0.868)               | *' depressed' (0.542)          | *' city' (0.672)              
-2    | *' bleak' (0.542)              |  ' City' (0.545)               | *' dark' (0.526)               | *' dark' (0.512)              
-3    | *' depressed' (0.539)          | *' dark' (0.509)               | *' bleak' (0.523)              | *' depressed' (0.422)         
-4    | *' dark' (0.507)               |  ' cities' (0.422)             | *' sad' (0.517)                | *' bleak' (0.392)             
-5    | *' city' (0.376)               |  ' CITY' (0.413)               | *' city' (0.413)               | *' sad' (0.392)               
-6    |  ' Dark' (0.324)               |  ' town' (0.386)               |  ' Dark' (0.334)               |  ' City' (0.389)              
-7    |  'Dark' (0.262)                |  'City' (0.382)                |  'Dark' (0.270)                |  ' cities' (0.316)            
-8    |  ' depressing' (0.261)         |  '-city' (0.349)               |  ' City' (0.265)               |  ' Dark' (0.313)              
-9    |  ' Sad' (0.258)                |  ' Dark' (0.313)               |  ' DARK' (0.260)               |  ' town' (0.292)              
-10   |  ' DARK' (0.252)               |  'city' (0.305)                |  ' depressing' (0.256)         |  ' CITY' (0.285)              
+1    | *' city' (0.868)               | *' city' (0.670)               | *' sad' (0.548)                | *' sad' (0.548)               
+2    |  ' City' (0.545)               | *' dark' (0.494)               | *' bleak' (0.542)              | *' bleak' (0.542)             
+3    | *' dark' (0.509)               | *' depressed' (0.391)          | *' depressed' (0.539)          | *' depressed' (0.539)         
+4    |  ' cities' (0.422)             | *' bleak' (0.330)              | *' dark' (0.507)               | *' dark' (0.507)              
+5    |  ' CITY' (0.413)               | *' sad' (0.303)                | *' city' (0.376)               | *' city' (0.376)              
+6    |  ' town' (0.386)               |  ' country' (0.222)            |  ' Dark' (0.324)               |  ' Dark' (0.324)              
+7    |  'City' (0.382)                |  '-city' (0.220)               |  'Dark' (0.262)                |  'Dark' (0.262)               
+8    |  '-city' (0.349)               |  ' City' (0.204)               |  ' depressing' (0.261)         |  ' depressing' (0.261)        
+9    |  ' Dark' (0.313)               |  ' town' (0.200)               |  ' Sad' (0.258)                |  ' Sad' (0.258)               
+10   |  'city' (0.305)                |  'city' (0.195)                |  ' DARK' (0.252)               |  ' DARK' (0.252)              
+11   | *' depressed' (0.288)          |  ' village' (0.193)            |  ' City' (0.241)               |  ' City' (0.241)              
+12   |  ' country' (0.278)            |  ' state' (0.191)              |  'dark' (0.234)                |  'dark' (0.234)               
+13   |  ' village' (0.275)            |  ' CITY' (0.191)               |  ' bright' (0.224)             |  ' bright' (0.224)            
+14   |  ' county' (0.259)             |  ' deep' (0.190)               |  ' black' (0.224)              |  ' black' (0.224)             
+15   |  ' state' (0.251)              |  ' county' (0.190)             |  'Sad' (0.220)                 |  'Sad' (0.220)                
+16   |  ' towns' (0.246)              |  ' bright' (0.189)             |  ' depression' (0.216)         |  ' depression' (0.216)        
+17   |  ' DARK' (0.244)               |  ' cities' (0.189)             |  ' happy' (0.216)              |  ' happy' (0.216)             
+18   |  'Dark' (0.239)                |  ' cold' (0.187)               |  ' cities' (0.213)             |  ' cities' (0.213)            
+19   |  ' Town' (0.237)               |  ' Dark' (0.182)               |  ' cold' (0.212)               |  ' cold' (0.212)              
+20   |  ' island' (0.236)             |  ' black' (0.181)              |  ' deep' (0.208)               |  ' deep' (0.208)              
 
---- Dot Product (Magnitude Bias) ---
-Rank | CoLaR                          | Soft                           | Soft-Ent                       | Solver                        
+--- NEAREST NEIGHBORS (DOT PRODUCT) — * = target token ---
+Rank | Soft                           | Solver                         | CoLaR                          | Centroid                      
 ------------------------------------------------------------------------------------------------------------------------------------------
-1    | *' bleak' (0.348)              | *' city' (0.186)               | *' depressed' (0.149)          | *' city' (0.259)              
-2    | *' depressed' (0.335)          | *' dark' (0.123)               | *' bleak' (0.148)              | *' depressed' (0.230)         
-3    | *' sad' (0.309)                |  ' City' (0.115)               | *' sad' (0.129)                | *' dark' (0.222)              
-4    | *' dark' (0.251)               |  ' cities' (0.106)             | *' dark' (0.115)               | *' bleak' (0.221)             
-5    | *' city' (0.165)               |  ' CITY' (0.095)               | *' city' (0.080)               | *' sad' (0.194)               
-6    |  ' depressing' (0.161)         |  'City' (0.090)                |  ' Dark' (0.072)               |  ' City' (0.147)              
-7    |  ' Dark' (0.159)               |  ' town' (0.090)               |  ' depressing' (0.070)         |  ' cities' (0.143)            
-8    |  ' Sad' (0.146)                |  '-city' (0.088)               |  ' Sad' (0.061)                |  ' Dark' (0.135)              
-9    |  'Dark' (0.135)                | *' depressed' (0.087)          |  'Dark' (0.061)                |  ' town' (0.122)              
-10   |  ' DARK' (0.130)               |  'city' (0.076)                |  ' DARK' (0.059)               |  ' CITY' (0.118)              
+1    | *' city' (0.186)               | *' city' (0.238)               | *' bleak' (0.348)              | *' bleak' (0.156)             
+2    | *' dark' (0.123)               | *' dark' (0.198)               | *' depressed' (0.335)          | *' depressed' (0.150)         
+3    |  ' City' (0.115)               | *' depressed' (0.196)          | *' sad' (0.309)                | *' sad' (0.138)               
+4    |  ' cities' (0.106)             | *' bleak' (0.172)              | *' dark' (0.251)               | *' dark' (0.112)              
+5    |  ' CITY' (0.095)               | *' sad' (0.138)                | *' city' (0.165)               | *' city' (0.074)              
+6    |  'City' (0.090)                |  '-city' (0.092)               |  ' depressing' (0.161)         |  ' depressing' (0.072)        
+7    |  ' town' (0.090)               |  ' darker' (0.084)             |  ' Dark' (0.159)               |  ' Dark' (0.071)              
+8    |  '-city' (0.088)               |  ' bright' (0.083)             |  ' Sad' (0.146)                |  ' Sad' (0.065)               
+9    | *' depressed' (0.087)          |  ' country' (0.083)            |  'Dark' (0.135)                |  'Dark' (0.060)               
+10   |  'city' (0.076)                |  ' darkness' (0.081)           |  ' DARK' (0.130)               |  ' DARK' (0.058)              
+11   |  ' Dark' (0.075)               |  'city' (0.080)                |  ' sadness' (0.128)            |  ' sadness' (0.057)           
+12   |  ' village' (0.068)            |  ' village' (0.079)            |  ' grim' (0.125)               |  ' grim' (0.056)              
+13   |  ' towns' (0.067)              |  ' cities' (0.079)             |  ' depression' (0.125)         |  ' depression' (0.056)        
+14   |  ' county' (0.064)             |  ' depressing' (0.078)         |  'dark' (0.122)                |  'dark' (0.055)               
+15   |  ' country' (0.062)            |  ' county' (0.077)             |  ' bright' (0.122)             |  ' bright' (0.055)            
+16   |  ' ciudad' (0.062)             |  ' town' (0.077)               |  'Sad' (0.122)                 |  'Sad' (0.054)                
+17   |  ' DARK' (0.062)               |  ' grim' (0.077)               |  ' darker' (0.117)             |  ' darker' (0.052)            
+18   |  'Dark' (0.060)                |  ' depression' (0.076)         |  ' depress' (0.114)            |  ' depress' (0.051)           
+19   |  ' città' (0.059)              |  'dark' (0.075)                |  ' cities' (0.110)             |  ' cities' (0.049)            
+20   |  ' Cities' (0.059)             |  ' deep' (0.075)               |  ' happy' (0.109)              |  ' happy' (0.049)             
 
---- Interrogation Probe ---
+--- CONCEPT DESCRIPTIONS ---
 
-   CoLaR → 'The concept of "dark" is a profound and multifaceted idea that encompasses a wide range of emotions, sensations, and experiences. It is a feeling that can be both intense and overwhelming, like a heavy weight pressing down on the soul. Imagine a dense, impenetrable fog that shrouds everything, making it impossible to see or breathe. The air is thick with an oppressive, suffocating presence that seems to cling to every surface, every thought, and every emotion.
+      Soft → 'A city is a sprawling metropolis, a tapestry of towering skyscrapers, bustling streets, and vibrant neighborhoods. It's a place where cultures blend, where traditions are born, and where the sounds of the world come alive. The city is a kaleidoscope of colors, a symphony of sounds, and a feast for the senses. From the gleaming glass and steel of modern skyscrapers to the historic charm of ancient architecture, the city is a living, breathing entity that pulsates with energy and life.
+
+Imagine walking through the city streets, surrounded by the hum of traffic, the chatter of pedestrians, and the wail of sirens in the distance. The air is thick with the smells of street food, freshly brewed coffee, and the sweet scent of blooming flowers. Every step reveals a new sight, a new sound, and a new experience. The city is a place of endless possibility, where dreams are made and broken, where fortunes are won and lost, and'
+      1.  A           | 53.44%
+      2.  The         | 19.66%
+      3.  Imagine     |  8.20%
+      4.  a           |  1.18%
+      5.  En          |  1.11%
+
+    Solver → 'A dark, foreboding presence looms over the city, casting a shadow that seems to swallow everything in its path. The air is thick with the weight of despair, and the sky above is a deep, foreboding grey that seems to press down on the earth. The streets are empty and silent, save for the occasional distant rumble of thunder that seems to echo through the desolate landscape. The buildings stand like skeletal sentinels, their windows like empty eyes staring back with a cold, unforgiving gaze. The wind howls through the streets like a mournful cry, a haunting reminder of the darkness that has consumed the city. The very atmosphere seems to vibrate with a sense of foreboding, as if the city itself is holding its breath in anticipation of some unknown, impending doom. The darkness is palpable, a living, breathing entity that seems to seep into every pore, every fiber of being, leaving an indelible mark on all who dare'
+      1.  A           | 35.74%
+      2.  The         | 31.54%
+      3.  Imagine     | 13.15%
+      4.  Darkness    |  2.76%
+      5.  Dark        |  1.78%
+
+     CoLaR → 'The concept of "dark" is a profound and multifaceted idea that encompasses a wide range of emotions, sensations, and experiences. It is a feeling that can be both intense and overwhelming, like a heavy weight pressing down on the soul. Imagine a dense, impenetrable fog that shrouds everything, making it impossible to see or breathe. The air is thick with an oppressive, suffocating presence that seems to cling to every surface, every thought, and every emotion.
 
 The darkness is not just a lack of light, but a palpable, tactile force that can be felt in every cell of the body. It's a cold, damp chill that seeps into the bones, making the skin crawl with unease. The darkness is a reminder of the unknown, the unseen, and the unexplored. It's a mystery that lurks just beyond the edge of perception, waiting to pounce and consume everything in its path.
 
@@ -360,46 +463,27 @@ In this darkness, time loses all meaning'
       4.  Dark        |  8.37%
       5.  Darkness    |  4.21%
 
-    Soft → 'A city is a sprawling metropolis, a tapestry of towering skyscrapers, bustling streets, and vibrant neighborhoods. It's a place where cultures blend, where traditions are born, and where the sounds of the world come alive. The city is a kaleidoscope of colors, a symphony of sounds, and a feast for the senses. From the gleaming glass and steel of modern skyscrapers to the historic charm of ancient architecture, the city is a living, breathing entity that pulsates with energy and life.
-
-Imagine walking through the city streets, surrounded by the hum of traffic, the chatter of pedestrians, and the wail of sirens in the distance. The air is thick with the smells of street food, freshly brewed coffee, and the sweet scent of blooming flowers. Every step reveals a new sight, a new sound, and a new experience. The city is a place of endless possibility, where dreams are made and broken, where fortunes are won and lost, and'
-      1.  A           | 53.44%
-      2.  The         | 19.66%
-      3.  Imagine     |  8.20%
-      4.  a           |  1.18%
-      5.  En          |  1.11%
-
-Soft-Ent → 'A dark and foreboding presence looms over the landscape, casting a shadow that seems to swallow everything in its path. The air is heavy with an oppressive weight, making it hard to breathe. The sky above is a deep, foreboding grey, with clouds that seem to twist and writhe like living things. The ground beneath is dry and cracked, with weeds that seem to writhe in agony. The very atmosphere seems to vibrate with a sense of despair, as if the very fabric of reality is torn and frayed. The darkness seems to seep into every pore, leaving a sense of hopelessness and desolation in its wake. The concept of "dark" is a palpable, living thing, a presence that can be felt and touched, a weight that presses down upon the soul. It is a feeling of being lost and alone, of being consumed by an endless and crushing void. It is a sense of being trapped in a never-ending nightmare, with no escape'
-      1.  A           | 21.22%
-      2.  The         | 18.72%
-      3.  Imagine     | 12.09%
-      4.  Dark        |  6.47%
-      5.  Darkness    |  5.71%
-
-  Solver → 'A city at night is a kaleidoscope of sounds, sights, and smells. The sky is a deep shade of indigo, almost black, with a few twinkling stars scattered about like diamonds on a velvet cloth. The air is thick with the hum of traffic, the wail of sirens, and the chatter of pedestrians. The streets are a labyrinth of neon lights, a colorful tapestry of billboards, and a maze of towering skyscrapers that seem to touch the sky. The smell of exhaust fumes, greasy food, and exhaust fumes wafts through the air, a pungent mix that is both overwhelming and intoxicating. The city is a living, breathing entity, pulsating with energy and life. It is a place where dreams are made and broken, where hopes are raised and dashed, and where the sounds, sights, and smells of the night come together to create a sensory experience that is both exhilarating and exhausting. The city is a place'
-      1.  A           | 37.19%
-      2.  The         | 30.84%
-      3.  Imagine     |  7.80%
-      4.  Picture     |  1.74%
-      5.  **          |  1.44%
+  Centroid → 'A dark and foreboding presence looms over the landscape, casting a shadow that seems to swallow everything in its path. The air is heavy with an unshakeable sense of despair, weighing down on the heart like a physical force. Every sound is muffled, as if the very fabric of reality is trying to stifle the last vestiges of hope. The sky above is a deep, foreboding grey, with clouds that seem to twist and writhe like living things, their tendrils reaching out to snuff out the last flickers of light. The ground beneath is dry and cracked, like the parched earth of a long-forgotten grave, and the trees stand like skeletal sentinels, their branches etched against the sky like a macabre dance of death. The wind whispers a mournful sigh, a lonely lament that seems to echo through the desolate landscape, a reminder that even the most fleeting joys are but a distant memory, lost forever in the'
+      1.  A           | 23.36%
+      2.  The         | 18.20%
+      3.  Imagine     | 11.75%
+      4.  Dark        |  5.55%
+      5.  Darkness    |  4.60%
 
 ========================================================================================================================
-🧪 The Overgrown Relic
+EXPERIMENT: The Overgrown Relic
 ========================================================================================================================
 
---- THE CHEMICAL BASELINE (Input Anatomy) ---
-  Standard Temp (T=0.6) Entropy: 1.1295
-  Bounded Temp  (T=10.0000) Entropy: 1.6069
+--- INPUT TOKENS (k=5) ---
+  ID     | Token        | Logit  | Raw P    | Scaled P (T={CFG.temperature}) | Magnitude
+  --------------------------------------------------------------------------------------
+  13952  | forest       |  16.0 |   57.93% |               76.53% |   0.618
+  11204  | magic        |  15.5 |    7.84% |                2.73% |   0.627
+  14154  | ancient      |  15.0 |   21.31% |               14.46% |   0.672
+  6307   | green        |  14.5 |   12.93% |                6.28% |   0.580
+  11204  | magic        |  14.0 |    7.84% |                2.73% |   0.627
 
-  ID     | Token        | Logit  | Soft P   | Ent P    | Magnitude
-  ----------------------------------------------------------------
-  13952  | forest       |  16.0 |   57.43% |   22.05% |   0.618
-  11204  | magic        |  15.5 |   24.96% |   20.97% |   0.627
-  14154  | ancient      |  15.0 |   10.85% |   19.95% |   0.672
-  6307   | green        |  14.5 |    4.71% |   18.98% |   0.580
-  11204  | magic        |  14.0 |    2.05% |   18.05% |   0.627
-
---- PRE-FORGE CROSS-SIMILARITY (Internal Gravity) ---
+--- INPUT CROSS-SIMILARITY ---
          forest  magic  ancient  green  magic
 forest   1.0000 0.1240   0.0964 0.1298 0.1240
 magic    0.1240 1.0000   0.0885 0.1225 1.0000
@@ -407,39 +491,86 @@ ancient  0.0964 0.0885   1.0000 0.1056 0.0885
 green    0.1298 0.1225   0.1056 1.0000 0.1225
 magic    0.1240 1.0000   0.0885 0.1225 1.0000
 
+--- OUTPUT CROSS-SIMILARITY ---
+  Soft: |v| = 0.501
+  Solver: |v| = 0.625
+  CoLaR: |v| = 0.839
+  Centroid: |v| = 0.375
+           Soft  Solver  CoLaR  Centroid
+Soft     1.0000  0.8493 0.6138    0.6138
+Solver   0.8493  1.0000 0.7550    0.7550
+CoLaR    0.6138  0.7550 1.0000    1.0000
+Centroid 0.6138  0.7550 1.0000    1.0000
 
-
---- Cosine Similarity (Geometry) ---
-Rank | CoLaR                          | Soft                           | Soft-Ent                       | Solver                        
+--- NEAREST NEIGHBORS (COSINE) — * = target token ---
+Rank | Soft                           | Solver                         | CoLaR                          | Centroid                      
 ------------------------------------------------------------------------------------------------------------------------------------------
-1    | *' magic' (0.779)              | *' forest' (0.894)             | *' magic' (0.768)              | *' forest' (0.678)            
-2    | *' forest' (0.487)             |  ' Forest' (0.550)             | *' forest' (0.518)             | *' magic' (0.536)             
-3    | *' ancient' (0.482)            | *' magic' (0.516)              | *' ancient' (0.483)            | *' ancient' (0.524)           
-4    | *' green' (0.472)              |  ' forests' (0.473)            | *' green' (0.460)              | *' green' (0.522)             
-5    |  ' Magic' (0.454)              |  'Forest' (0.385)              |  ' Magic' (0.449)              |  ' Forest' (0.419)            
-6    |  'Magic' (0.336)               |  'forest' (0.376)              |  ' Forest' (0.335)             |  ' forests' (0.366)           
-7    |  ' Forest' (0.317)             |  ' Magic' (0.321)              |  'Magic' (0.332)               |  ' Magic' (0.329)             
-8    |  'magic' (0.296)               | *' ancient' (0.289)            |  'magic' (0.292)               |  ' Green' (0.316)             
-9    |  ' Green' (0.288)              | *' green' (0.236)              |  ' forests' (0.292)            |  'forest' (0.280)             
-10   |  ' magical' (0.287)            |  'Magic' (0.235)               |  ' magical' (0.284)            |  ' Ancient' (0.279)           
+1    | *' forest' (0.976)             | *' forest' (0.767)             | *' magic' (0.779)              | *' magic' (0.779)             
+2    |  ' Forest' (0.595)             | *' ancient' (0.448)            | *' forest' (0.487)             | *' forest' (0.487)            
+3    |  ' forests' (0.515)            | *' green' (0.374)              | *' ancient' (0.482)            | *' ancient' (0.482)           
+4    |  'Forest' (0.419)              | *' magic' (0.338)              | *' green' (0.472)              | *' green' (0.472)             
+5    |  'forest' (0.395)              |  'forest' (0.270)              |  ' Magic' (0.454)              |  ' Magic' (0.454)             
+6    | *' ancient' (0.296)            |  'Forest' (0.203)              |  'Magic' (0.336)               |  'Magic' (0.336)              
+7    |  ' trees' (0.236)              |  ' garden' (0.203)             |  ' Forest' (0.317)             |  ' Forest' (0.317)            
+8    |  ' woods' (0.225)              |  ' Forest' (0.200)             |  'magic' (0.296)               |  'magic' (0.296)              
+9    |  ' ocean' (0.221)              |  ' mountain' (0.200)           |  ' Green' (0.288)              |  ' Green' (0.288)             
+10   | *' green' (0.220)              |  ' ocean' (0.199)              |  ' magical' (0.287)            |  ' magical' (0.287)           
+11   |  ' garden' (0.216)             |  ' Magic' (0.199)              |  ' forests' (0.276)            |  ' forests' (0.276)           
+12   |  ' village' (0.206)            |  ' forests' (0.196)            |  ' MAGIC' (0.266)              |  ' MAGIC' (0.266)             
+13   |  ' river' (0.205)              |  ' trees' (0.196)              |  ' Ancient' (0.259)            |  ' Ancient' (0.259)           
+14   |  ' mountain' (0.205)           |  ' black' (0.195)              |  ' blue' (0.256)               |  ' blue' (0.256)              
+15   |  ' land' (0.204)               |  ' street' (0.193)             |  'Green' (0.251)               |  'Green' (0.251)              
+16   |  ' jungle' (0.203)             |  ' village' (0.193)            |  ' red' (0.251)                |  ' red' (0.251)               
+17   |  ' tree' (0.202)               |  '-green' (0.193)              |  ' black' (0.246)              |  ' black' (0.246)             
+18   |  ' woodland' (0.201)           |  ' Green' (0.193)              |  '-green' (0.244)              |  '-green' (0.244)             
+19   |  ' city' (0.198)               |  ' blue' (0.190)               |  ' GREEN' (0.242)              |  ' GREEN' (0.242)             
+20   |  ' desert' (0.197)             |  ' Ancient' (0.189)            |  ' yellow' (0.241)             |  ' yellow' (0.241)            
 
---- Dot Product (Magnitude Bias) ---
-Rank | CoLaR                          | Soft                           | Soft-Ent                       | Solver                        
+--- NEAREST NEIGHBORS (DOT PRODUCT) — * = target token ---
+Rank | Soft                           | Solver                         | CoLaR                          | Centroid                      
 ------------------------------------------------------------------------------------------------------------------------------------------
-1    | *' magic' (0.410)              | *' forest' (0.239)             | *' magic' (0.180)              | *' forest' (0.262)            
-2    | *' ancient' (0.272)            |  ' Forest' (0.145)             | *' ancient' (0.121)            | *' ancient' (0.220)           
-3    | *' forest' (0.252)             |  ' forests' (0.143)            | *' forest' (0.120)             | *' magic' (0.210)             
-4    |  ' Magic' (0.233)              | *' magic' (0.140)              |  ' Magic' (0.103)              | *' green' (0.189)             
-5    | *' green' (0.230)              |  'forest' (0.111)              | *' green' (0.100)              |  ' forests' (0.160)           
-6    |  'Magic' (0.185)               |  'Forest' (0.108)              |  'Magic' (0.081)               |  ' Forest' (0.160)            
-7    |  ' magical' (0.182)            |  ' Magic' (0.085)              |  ' magical' (0.080)            |  ' Magic' (0.126)             
-8    |  'magic' (0.171)               | *' ancient' (0.084)            |  ' forests' (0.076)            |  ' Ancient' (0.122)           
-9    |  ' forests' (0.162)            |  ' woods' (0.068)              |  ' Forest' (0.076)             |  'forest' (0.119)             
-10   |  ' Forest' (0.162)             |  ' jungle' (0.067)             |  'magic' (0.075)               |  '-green' (0.114)             
+1    | *' forest' (0.302)             | *' forest' (0.296)             | *' magic' (0.410)              | *' magic' (0.183)             
+2    |  ' Forest' (0.182)             | *' ancient' (0.188)            | *' ancient' (0.272)            | *' ancient' (0.122)           
+3    |  ' forests' (0.181)            | *' green' (0.136)              | *' forest' (0.252)             | *' forest' (0.113)            
+4    |  'Forest' (0.136)              | *' magic' (0.133)              |  ' Magic' (0.233)              |  ' Magic' (0.104)             
+5    |  'forest' (0.135)              |  'forest' (0.115)              | *' green' (0.230)              | *' green' (0.103)             
+6    | *' ancient' (0.100)            |  ' forests' (0.086)            |  'Magic' (0.185)               |  'Magic' (0.083)              
+7    |  ' woodland' (0.082)           |  ' ocean' (0.084)              |  ' magical' (0.182)            |  ' magical' (0.082)           
+8    |  ' woods' (0.080)              |  ' Ancient' (0.083)            |  'magic' (0.171)               |  'magic' (0.076)              
+9    |  ' jungle' (0.080)             |  ' woods' (0.083)              |  ' forests' (0.162)            |  ' forests' (0.073)           
+10   |  ' ocean' (0.074)              |  'Forest' (0.082)              |  ' Forest' (0.162)             |  ' Forest' (0.073)            
+11   |  ' trees' (0.073)              |  '-green' (0.082)              |  ' Ancient' (0.152)            |  ' Ancient' (0.068)           
+12   |  ' desert' (0.069)             |  ' jungle' (0.082)             |  ' MAGIC' (0.149)              |  ' MAGIC' (0.067)             
+13   |  ' garden' (0.069)             |  ' garden' (0.080)             |  '-green' (0.139)              |  '-green' (0.062)             
+14   |  ' mountains' (0.067)          |  ' mountain' (0.080)           |  ' Green' (0.135)              |  ' Green' (0.061)             
+15   |  ' forestry' (0.066)           |  ' village' (0.077)            |  ' yellow' (0.133)             |  ' yellow' (0.060)            
+16   |  ' village' (0.066)            |  ' desert' (0.077)             |  ' sacred' (0.127)             |  ' sacred' (0.057)            
+17   |  ' mountain' (0.065)           |  ' medieval' (0.077)           |  'forest' (0.127)              |  'forest' (0.057)             
+18   | *' green' (0.064)              |  ' Forest' (0.076)             |  'Green' (0.126)               |  'Green' (0.056)              
+19   |  ' river' (0.063)              |  ' Magic' (0.076)              |  ' blue' (0.125)               |  ' blue' (0.056)              
+20   |  ' wilderness' (0.062)         |  ' trees' (0.076)              |  ' GREEN' (0.125)              |  ' GREEN' (0.056)             
 
---- Interrogation Probe ---
+--- CONCEPT DESCRIPTIONS ---
 
-   CoLaR → 'Imagine a world where the ordinary becomes extraordinary, where the mundane is transformed into the magical.  In this realm, the air is alive with an otherworldly energy that crackles and sparks with an electric blue light.  The trees sway to an unheard rhythm, their branches weaving a hypnotic dance that seems to draw the viewer in.  The ground beneath your feet hums with a gentle vibration, as if the earth itself is singing a soft, ethereal melody.
+      Soft → 'A forest is a dense and vibrant ecosystem that teems with life. Towering trees, their trunks sturdy and strong, stretch towards the sky, their leaves a kaleidoscope of greens, from the deep emerald of ancient oaks to the bright lime of newly sprouted saplings. The air is alive with the songs of birds, their melodies a symphony of joy and freedom. The rustle of leaves and the snapping of twigs beneath the feet of creatures great and small create a soothing background hum, a reminder that this is a place where life is in constant motion.
+
+The forest floor is a tapestry of textures and colors, a rich mosaic of earthy browns, mossy greens, and ferns that unfurl like delicate fingers. Wildflowers bloom in every corner, their petals a riot of color, drawing in bees and butterflies like magnets. The scent of damp earth and decaying leaves fills the air, a primal aroma that speaks to the forest's ancient, timeless'
+      1.  A           | 41.07%
+      2.  Imagine     | 21.99%
+      3.  The         | 17.12%
+      4.  En          |  3.59%
+      5.  a           |  1.59%
+
+    Solver → 'A forest is a dense collection of trees, shrubs, and other vegetation, often found in a natural setting. The trees, which can range in height from a few feet to over a hundred feet, stretch towards the sky, their trunks sturdy and strong, their branches a tangled web of life. The leaves, a kaleidoscope of colors, rustle and whisper in the gentle breeze, casting dappled shadows on the forest floor. The air is filled with the sweet scent of blooming flowers and the earthy smell of damp soil. The forest floor, a tapestry of ferns, moss, and wildflowers, is a haven for a diverse array of wildlife, from the tiniest insects to the largest mammals. The forest is a place of mystery and wonder, where the sounds of nature are a constant reminder of the beauty and complexity of the natural world.
+
+In this description, the concept of a forest is vividly described, using sensory details to bring the reader into'
+      1.  A           | 35.08%
+      2.  The         | 27.32%
+      3.  Imagine     | 21.28%
+      4.  En          |  3.07%
+      5.  "           |  1.36%
+
+     CoLaR → 'Imagine a world where the ordinary becomes extraordinary, where the mundane is transformed into the magical.  In this realm, the air is alive with an otherworldly energy that crackles and sparks with an electric blue light.  The trees sway to an unheard rhythm, their branches weaving a hypnotic dance that seems to draw the viewer in.  The ground beneath your feet hums with a gentle vibration, as if the earth itself is singing a soft, ethereal melody.
 
 In this world, the laws of physics are mere suggestions, and the impossible becomes possible.  Water flows uphill, defying gravity's grasp, and fire burns with a soft, golden light that warms without scorching.  The very fabric of reality is woven from a tapestry of wonder, where the boundaries between reality and fantasy blur and dissolve.
 
@@ -450,88 +581,114 @@ Here, magic is not just a concept, but a living, breathing force that pulses thr
       4.  "           |  4.69%
       5.  A           |  4.14%
 
-    Soft → 'A forest is a dense and vibrant ecosystem that teems with life. Towering trees, their trunks sturdy and strong, stretch towards the sky, their leafy canopies a kaleidoscope of greens, from the deep emerald of ancient foliage to the bright lime of new growth. The air is alive with the songs of birds, the rustle of small creatures through underbrush, and the gentle hum of insects as they flit from flower to flower. The scent of damp earth and decaying leaves mingles with the sweet fragrance of blooming wildflowers, creating a heady aroma that fills the senses. The forest floor, a tapestry of textures and colors, is a haven for the creatures that call it home, from the soft moss that carpets the ground to the gnarled roots that twist and turn like ancient fingers. As the seasons change, the forest transforms, its moods shifting from the vibrant hues of spring to the fiery blaze of autumn, and finally, to the'
-      1.  A           | 40.27%
-      2.  Imagine     | 19.02%
-      3.  The         | 16.79%
-      4.  En          |  4.24%
-      5.  a           |  3.31%
-
-Soft-Ent → 'Imagine a world where the ordinary becomes extraordinary, where the mundane is transformed into the magical.  The concept of magic is like a vibrant, shimmering mist that envelops everything, imbuing it with an otherworldly essence.  It's as if the very fabric of reality has been woven with an intricate pattern of wonder and enchantment, making the impossible possible and the ordinary, extraordinary.
+  Centroid → 'Imagine a world where the ordinary becomes extraordinary, where the mundane is transformed into the magical.  The concept of magic is like a vibrant, shimmering mist that envelops everything, imbuing it with an otherworldly essence.  It's as if the very fabric of reality has been woven with an intricate pattern of wonder and enchantment, making the impossible possible and the ordinary, extraordinary.
 
 In this world, magic is not just a tool or a power, but a way of life.  It's a mindset that sees the world as a place of endless possibility, where the boundaries of reality are stretched and the imagination knows no limits.  It's a world where the rational and the irrational coexist, where the logical and the illogical are intertwined, and where the impossible becomes possible.
 
-The concept of magic is like a kaleidoscope of colors, constantly shifting and changing, yet always remaining vibrant and alive.  It's a world where the ordinary becomes extraordinary, where the familiar becomes'
-      1.  Imagine     | 18.01%
-      2.  Magic       | 14.93%
-      3.  The         | 14.93%
-      4.  A           |  6.22%
-      5.  "           |  4.55%
-
-  Solver → 'A forest is a dense and vibrant ecosystem teeming with life. Towering trees with gnarled trunks and leafy canopies stretch towards the sky, their branches tangled in a complex network of limbs and foliage. The air is thick with the scent of damp earth and decaying leaves, and the soft rustle of leaves and chirping of birds create a soothing melody that fills the atmosphere. The forest floor is a tapestry of textures, with soft moss and ferns carpeting the ground, and the rough bark of ancient trees providing a rugged contrast. As the seasons change, the forest transforms, with spring bringing new life and color, summer warmth and vitality, autumn's fiery hues, and winter's quiet stillness. The forest is a place of mystery and wonder, where the boundaries between reality and myth blur, and the natural world is at its most enchanting. 
-
-Note: The description is written in a vivid and descriptive style, using sensory details to bring the concept of a'
-      1.  A           | 39.77%
-      2.  The         | 10.70%
-      3.  Imagine     |  9.45%
-      4.  En          |  7.83%
-      5.  Picture     |  2.71%
+The concept of magic is like a kaleidoscope of colors, constantly shifting and evolving, yet always retaining its essence.  It's a symphony of wonder, a dance of enchantment, a'
+      1.  Imagine     | 19.42%
+      2.  Magic       | 15.12%
+      3.  The         | 14.21%
+      4.  A           |  5.92%
+      5.  "           |  4.61%
 
 ========================================================================================================================
-🧪 The Sommelier's Blind Taste Test
+EXPERIMENT: The Sommelier's Blind Taste Test
 ========================================================================================================================
 
---- THE CHEMICAL BASELINE (Input Anatomy) ---
-  Standard Temp (T=0.6) Entropy: 1.2225
-  Bounded Temp  (T=10.0000) Entropy: 1.3854
+--- INPUT TOKENS (k=4) ---
+  ID     | Token        | Logit  | Raw P    | Scaled P (T={CFG.temperature}) | Magnitude
+  --------------------------------------------------------------------------------------
+  11033  | coffee       |  15.5 |   33.62% |               38.12% |   0.657
+  33165  | vanilla      |  15.5 |   33.62% |               38.12% |   0.783
+  72754  | oat          |  15.0 |   20.39% |               16.57% |   0.740
+  16603  | smoke        |  14.5 |   12.37% |                7.20% |   0.675
 
-  ID     | Token        | Logit  | Soft P   | Ent P    | Magnitude
-  ----------------------------------------------------------------
-  11033  | coffee       |  15.5 |   38.12% |   25.93% |   0.657
-  33165  | vanilla      |  15.5 |   38.12% |   25.93% |   0.783
-  72754  | oat          |  15.0 |   16.57% |   24.67% |   0.740
-  16603  | smoke        |  14.5 |    7.20% |   23.47% |   0.675
-
---- PRE-FORGE CROSS-SIMILARITY (Internal Gravity) ---
+--- INPUT CROSS-SIMILARITY ---
          coffee  vanilla    oat  smoke
 coffee   1.0000   0.1175 0.0716 0.1297
 vanilla  0.1175   1.0000 0.0794 0.0732
 oat      0.0716   0.0794 1.0000 0.0374
 smoke    0.1297   0.0732 0.0374 1.0000
 
+--- OUTPUT CROSS-SIMILARITY ---
+  Soft: |v| = 0.450
+  Solver: |v| = 0.718
+  CoLaR: |v| = 0.800
+  Centroid: |v| = 0.400
+           Soft  Solver  CoLaR  Centroid
+Soft     1.0000  0.9308 0.9163    0.9163
+Solver   0.9308  1.0000 0.9423    0.9423
+CoLaR    0.9163  0.9423 1.0000    1.0000
+Centroid 0.9163  0.9423 1.0000    1.0000
 
-
---- Cosine Similarity (Geometry) ---
-Rank | CoLaR                          | Soft                           | Soft-Ent                       | Solver                        
+--- NEAREST NEIGHBORS (COSINE) — * = target token ---
+Rank | Soft                           | Solver                         | CoLaR                          | Centroid                      
 ------------------------------------------------------------------------------------------------------------------------------------------
-1    | *' vanilla' (0.605)            | *' vanilla' (0.758)            | *' vanilla' (0.621)            | *' coffee' (0.638)            
-2    | *' coffee' (0.556)             | *' coffee' (0.668)             | *' coffee' (0.568)             | *' vanilla' (0.622)           
-3    | *' oat' (0.547)                |  ' Vanilla' (0.428)            | *' oat' (0.540)                | *' oat' (0.491)               
-4    | *' smoke' (0.528)              |  ' Coffee' (0.399)             | *' smoke' (0.504)              | *' smoke' (0.472)             
-5    |  ' Vanilla' (0.342)            | *' oat' (0.369)                |  ' Vanilla' (0.351)            |  ' Coffee' (0.377)            
-6    |  ' Coffee' (0.330)             |  'Coffee' (0.312)              |  ' Coffee' (0.337)             |  ' Vanilla' (0.352)           
-7    |  ' Smoke' (0.293)              |  'coffee' (0.272)              |  ' Smoke' (0.279)              |  'Coffee' (0.294)             
-8    |  ' oats' (0.269)               |  ' chocolate' (0.255)          |  ' oats' (0.267)               |  ' Smoke' (0.261)             
-9    |  'Coffee' (0.259)              |  ' tea' (0.244)                |  'Coffee' (0.265)              |  'coffee' (0.260)             
-10   |  'Smoke' (0.243)               | *' smoke' (0.239)              |  ' chocolate' (0.244)          |  ' chocolate' (0.252)         
+1    | *' vanilla' (0.758)            | *' vanilla' (0.643)            | *' vanilla' (0.605)            | *' vanilla' (0.605)           
+2    | *' coffee' (0.668)             | *' coffee' (0.600)             | *' coffee' (0.556)             | *' coffee' (0.556)            
+3    |  ' Vanilla' (0.428)            | *' oat' (0.474)                | *' oat' (0.547)                | *' oat' (0.547)               
+4    |  ' Coffee' (0.399)             | *' smoke' (0.383)              | *' smoke' (0.528)              | *' smoke' (0.528)             
+5    | *' oat' (0.369)                |  'coffee' (0.202)              |  ' Vanilla' (0.342)            |  ' Vanilla' (0.342)           
+6    |  'Coffee' (0.312)              |  ' Coffee' (0.200)             |  ' Coffee' (0.330)             |  ' Coffee' (0.330)            
+7    |  'coffee' (0.272)              |  ' oats' (0.198)               |  ' Smoke' (0.293)              |  ' Smoke' (0.293)             
+8    |  ' chocolate' (0.255)          |  'Coffee' (0.193)              |  ' oats' (0.269)               |  ' oats' (0.269)              
+9    |  ' tea' (0.244)                |  ' Smoke' (0.191)              |  'Coffee' (0.259)              |  'Coffee' (0.259)             
+10   | *' smoke' (0.239)              |  ' Vanilla' (0.190)            |  'Smoke' (0.243)               |  'Smoke' (0.243)              
+11   |  ' oats' (0.205)               |  ' smoked' (0.186)             |  ' chocolate' (0.241)          |  ' chocolate' (0.241)         
+12   |  ' wine' (0.201)               |  ' chocolate' (0.186)          |  ' tea' (0.236)                |  ' tea' (0.236)               
+13   |  ' cocoa' (0.197)              |  ' tea' (0.186)                |  'coffee' (0.229)              |  'coffee' (0.229)             
+14   |  ' Chocolate' (0.196)          |  ' milk' (0.183)               |  ' smoked' (0.224)             |  ' smoked' (0.224)            
+15   |  ' espresso' (0.196)           |  ' sugar' (0.180)              |  ' milk' (0.210)               |  ' milk' (0.210)              
+16   |  ' sugar' (0.189)              |  ' espresso' (0.177)           |  ' sugar' (0.199)              |  ' sugar' (0.199)             
+17   |  ' pepper' (0.187)             |  ' wine' (0.176)               |  ' cocoa' (0.195)              |  ' cocoa' (0.195)             
+18   |  ' peanut' (0.183)             |  ' water' (0.172)              |  ' espresso' (0.194)           |  ' espresso' (0.194)          
+19   |  ' milk' (0.182)               |  ' pepper' (0.166)             |  ' water' (0.193)              |  ' water' (0.193)             
+20   |  ' cheese' (0.182)             |  ' cocoa' (0.165)              |  ' wine' (0.192)               |  ' wine' (0.192)              
 
---- Dot Product (Magnitude Bias) ---
-Rank | CoLaR                          | Soft                           | Soft-Ent                       | Solver                        
+--- NEAREST NEIGHBORS (DOT PRODUCT) — * = target token ---
+Rank | Soft                           | Solver                         | CoLaR                          | Centroid                      
 ------------------------------------------------------------------------------------------------------------------------------------------
-1    | *' vanilla' (0.379)            | *' vanilla' (0.267)            | *' vanilla' (0.195)            | *' vanilla' (0.347)           
-2    | *' oat' (0.323)                | *' coffee' (0.197)             | *' oat' (0.160)                | *' coffee' (0.299)            
-3    | *' coffee' (0.292)             |  ' Vanilla' (0.146)            | *' coffee' (0.150)             | *' oat' (0.259)               
-4    | *' smoke' (0.285)              | *' oat' (0.123)                | *' smoke' (0.136)              | *' smoke' (0.227)             
-5    |  ' Vanilla' (0.208)            |  ' Coffee' (0.118)             |  ' Vanilla' (0.107)            |  ' Vanilla' (0.191)           
-6    |  ' Coffee' (0.172)             |  'Coffee' (0.093)              |  ' Coffee' (0.088)             |  ' Coffee' (0.176)            
-7    |  ' oats' (0.167)               |  'coffee' (0.084)              |  ' oats' (0.083)               |  'Coffee' (0.140)             
-8    |  ' Smoke' (0.160)              |  ' chocolate' (0.080)          |  ' Smoke' (0.077)              |  ' oats' (0.138)              
-9    |  'Coffee' (0.138)              |  ' tea' (0.073)                |  'Coffee' (0.071)              |  ' Smoke' (0.128)             
-10   |  'Smoke' (0.135)               | *' smoke' (0.073)              |  ' chocolate' (0.068)          |  'coffee' (0.127)             
+1    | *' vanilla' (0.267)            | *' vanilla' (0.361)            | *' vanilla' (0.379)            | *' vanilla' (0.189)           
+2    | *' coffee' (0.197)             | *' coffee' (0.283)             | *' oat' (0.323)                | *' oat' (0.162)               
+3    |  ' Vanilla' (0.146)            | *' oat' (0.252)                | *' coffee' (0.292)             | *' coffee' (0.146)            
+4    | *' oat' (0.123)                | *' smoke' (0.186)              | *' smoke' (0.285)              | *' smoke' (0.143)             
+5    |  ' Coffee' (0.118)             |  ' oats' (0.110)               |  ' Vanilla' (0.208)            |  ' Vanilla' (0.104)           
+6    |  'Coffee' (0.093)              |  ' Vanilla' (0.104)            |  ' Coffee' (0.172)             |  ' Coffee' (0.086)            
+7    |  'coffee' (0.084)              |  'coffee' (0.099)              |  ' oats' (0.167)               |  ' oats' (0.084)              
+8    |  ' chocolate' (0.080)          |  ' smoked' (0.098)             |  ' Smoke' (0.160)              |  ' Smoke' (0.080)             
+9    |  ' tea' (0.073)                |  ' espresso' (0.098)           |  'Coffee' (0.138)              |  'Coffee' (0.069)             
+10   | *' smoke' (0.073)              |  ' garlic' (0.096)             |  'Smoke' (0.135)               |  'Smoke' (0.067)              
+11   |  ' oats' (0.072)               |  ' Smoke' (0.094)              |  ' chocolate' (0.135)          |  ' chocolate' (0.067)         
+12   |  ' espresso' (0.068)           |  ' Coffee' (0.094)             |  ' smoked' (0.131)             |  ' smoked' (0.066)            
+13   |  ' cocoa' (0.067)              |  ' chocolate' (0.093)          |  ' tea' (0.126)                |  ' tea' (0.063)               
+14   |  ' peanut' (0.065)             |  'Coffee' (0.092)              |  'coffee' (0.125)              |  'coffee' (0.063)             
+15   |  ' cinnamon' (0.063)           |  ' peanut' (0.092)             |  ' espresso' (0.119)           |  ' espresso' (0.060)          
+16   |  ' garlic' (0.062)             |  ' cocoa' (0.089)              |  ' cocoa' (0.118)              |  ' cocoa' (0.059)             
+17   |  ' banana' (0.061)             |  ' tea' (0.089)                |  ' garlic' (0.116)             |  ' garlic' (0.058)            
+18   |  ' Chocolate' (0.060)          |  ' milk' (0.084)               |  ' peanut' (0.116)             |  ' peanut' (0.058)            
+19   |  ' tomato' (0.059)             |  ' banana' (0.083)             |  ' banana' (0.107)             |  ' banana' (0.053)            
+20   |  ' potato' (0.059)             |  ' potato' (0.083)             |  ' potato' (0.107)             |  ' potato' (0.053)            
 
---- Interrogation Probe ---
+--- CONCEPT DESCRIPTIONS ---
 
-   CoLaR → 'The aroma of freshly brewed coffee wafts through the air, enticing the senses and beckoning the taste buds to come and explore. Rich, velvety, and smooth, the texture of a perfectly brewed cup of coffee is like a warm hug on a chilly day. The flavors dance on the palate, a delicate balance of bitter and sweet notes that tantalize the taste buds and leave a lasting impression. Whether it's a bold and intense roast or a subtle and nuanced pour-over, coffee is a sensory experience that awakens the senses and invigorates the spirit.
+      Soft → 'Imagine a rich, velvety liquid that's a deep, warm brown color, like the sun-kissed earth after a gentle summer rain. The aroma is intoxicating, a heady mix of sweet and bitter notes that tantalize the senses and leave you wanting more. As you lift the cup to your lips, the fragrance wafts up, teasing your nostrils and making your mouth water in anticipation. The first sip is like a symphony of flavors, with notes of chocolate, caramel, and a hint of fruitiness that dance on your tongue. The texture is smooth and luxurious, coating your palate with a satisfying richness that's both comforting and indulgent. As you savor the flavor, the bitterness begins to emerge, a subtle counterpoint to the sweetness that adds depth and complexity to the overall experience. The finish is long and satisfying, with a lingering aftertaste that leaves you craving another sip. This is the essence of coffee, a drink that's both familiar and exotic'
+      1.  Imagine     | 33.84%
+      2.  The         | 15.98%
+      3.  A           | 13.25%
+      4.  Coffee      |  7.09%
+      5.  Rich        |  6.26%
+
+    Solver → 'Imagine a rich, velvety liquid that's a deep, warm brown color, like the sun-kissed earth after a long summer. The aroma is intoxicating, a heady mix of sweet and bitter notes that tantalize the senses and leave you wanting more. As you lift the cup to your lips, the fragrance wafts up, teasing your nostrils and making your mouth water in anticipation. The first sip is like a symphony of flavors, with notes of chocolate, caramel, and a hint of fruitiness that dance on your tongue. The texture is smooth and luxurious, coating your palate with a satisfying richness that's both comforting and indulgent. As you savor the taste, the flavors deepen and become more complex, with subtle hints of spice and a lingering aftertaste that leaves you craving another sip. This is the essence of coffee, a drink that's both a daily ritual and a sensory experience that's hard to resist. 
+
+Note: The description is written in'
+      1.  Imagine     | 29.69%
+      2.  The         | 20.41%
+      3.  A           | 12.38%
+      4.  Rich        |  9.06%
+      5.  Coffee      |  8.51%
+
+     CoLaR → 'The aroma of freshly brewed coffee wafts through the air, enticing the senses and beckoning the taste buds to come and explore. Rich, velvety, and smooth, the texture of a perfectly brewed cup of coffee is like a warm hug on a chilly day. The flavors dance on the palate, a delicate balance of bitter and sweet notes that tantalize the taste buds and leave a lasting impression. Whether it's a bold and intense roast or a subtle and nuanced pour-over, coffee is a sensory experience that awakens the senses and invigorates the spirit.
 
 In the world of coffee, there are many variations and nuances, each with its own unique characteristics and flavor profiles. From the bright and citrusy notes of a Kenyan coffee to the deep and earthy undertones of a Sumatran coffee, every cup is a journey of discovery and exploration. Whether you're a seasoned coffee connoisseur or just starting to explore the world of coffee, there's always something new to learn'
       1.  The         | 25.06%
@@ -540,31 +697,13 @@ In the world of coffee, there are many variations and nuances, each with its own
       4.  rich        |  8.14%
       5.  Imagine     |  7.64%
 
-    Soft → 'Imagine a rich, velvety liquid that's a deep, warm brown color, like the sun-kissed earth after a gentle summer rain. The aroma is intoxicating, a heady mix of sweet and bitter notes that tantalize the senses and leave you wanting more. As you lift the cup to your lips, the fragrance wafts up, teasing your nostrils and making your mouth water in anticipation. The first sip is like a symphony of flavors, with notes of chocolate, caramel, and a hint of fruitiness that dance on your tongue. The texture is smooth and luxurious, coating your palate with a satisfying richness that's both comforting and indulgent. As you savor the flavor, the bitterness begins to emerge, a subtle counterpoint to the sweetness that adds depth and complexity to the overall experience. The finish is long and satisfying, with a lingering aftertaste that leaves you craving another sip. This is the essence of coffee, a drink that's both familiar and exotic'
-      1.  Imagine     | 33.84%
-      2.  The         | 15.98%
-      3.  A           | 13.25%
-      4.  Coffee      |  7.09%
-      5.  Rich        |  6.26%
+  Centroid → 'Imagine a rich, velvety liquid that's a deep, dark brown color, almost black. The aroma is intense and inviting, with notes of caramel, chocolate, and a hint of earthy undertones. As you bring the liquid to your lips, the anticipation builds, and the first sip is like a symphony of flavors on your tongue. The sweetness hits first, followed by a subtle bitterness that balances out the flavors, leaving a satisfying aftertaste that makes you want to take another sip. The texture is smooth and creamy, coating your tongue and the roof of your mouth, making you feel like you're indulging in a luxurious treat. The flavors are complex and layered, with hints of nuts, spices, and a deep, satisfying richness that's hard to put into words. It's a sensory experience that's both comforting and indulgent, making you feel like you're treating yourself to something special.
 
-Soft-Ent → 'Imagine a rich, velvety liquid that's a deep, warm brown color, like the color of a perfectly toasted marshmallow. The aroma is intoxicating, a heady mix of sweet and earthy notes that makes your mouth water in anticipation. As you take a sip, the flavors explode on your tongue - smooth, creamy, and utterly decadent. There's a hint of bitterness to balance out the sweetness, but it's a subtle note that only adds to the complexity of the flavor. The texture is luxurious, coating your tongue and the roof of your mouth with a silky smoothness that's hard to resist. Whether you're sipping it black, with a splash of milk, or topped with a mountain of whipped cream, coffee is a treat that's sure to satisfy your cravings and leave you feeling indulged and content.
-
-Note: The description is for coffee, not coffee, which is a type of bean. I've corrected the description to reflect this. 
-
-Here are some'
-      1.  Imagine     | 27.24%
-      2.  The         | 15.52%
-      3.  A           | 14.58%
-      4.  Rich        |  8.84%
-      5.  Coffee      |  6.89%
-
-  Solver → 'The rich aroma of freshly brewed coffee wafts through the air, enticing the senses and beckoning all to partake in its deep, velvety goodness. The first sip is like a symphony of flavors, with notes of dark chocolate, caramel, and a hint of smokiness that dance on the palate. As the flavors unfold, the bitterness of the coffee gives way to a smooth, creamy texture that coats the tongue and leaves a satisfying aftertaste. Whether enjoyed on its own or paired with a sweet treat, coffee is a true delight that never fails to satisfy the senses and lift the spirits.
-
-In this description, the concept of coffee is vividly described using sensory language to evoke a sense of experience and emotion. The use of words like "aroma", "entices", "beckoning", "symphony", "dance", and "satisfying" creates a sensory experience that transports the reader to a place of comfort and indulgence. The description also highlights the complexity'
-      1.  The         | 24.98%
-      2.  A           | 13.37%
-      3.  Rich        | 11.09%
-      4.  Imagine     |  9.78%
-      5.  rich        |  7.16%
+Note: The description is written in a way that's meant to be vivid'
+      1.  Imagine     | 27.19%
+      2.  The         | 15.49%
+      3.  A           | 13.67%
+      4.  Rich        | 10.65%
+      5.  Coffee      |  6.46%
 
 Done.
