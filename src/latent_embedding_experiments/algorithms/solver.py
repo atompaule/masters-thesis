@@ -9,6 +9,7 @@ from src.latent_embedding_experiments.algorithms.utils import select_targets
 def geometric_solver(
     logits: torch.Tensor,  # [V] — raw logits from LLM
     vocab_embs: torch.Tensor,  # [V, d] — token embedding matrix (unnormalized)
+    use_cosine: bool = True,  # if True, use cosine similarity; if False, use dot product
 ) -> torch.Tensor:
     """
     Geometric solver that optimizes a latent embedding to satisfy four loss terms:
@@ -23,6 +24,9 @@ def geometric_solver(
     Args:
         logits:      [V] raw logits from the LLM at a given time step
         vocab_embs:  [V, d] token embedding matrix (unnormalized)
+        use_cosine:  if True, compute cosine similarity (normalize both sides);
+                     if False, compute raw dot products (unnormalized vocab embeddings,
+                     latent embedding optimized in full vector space)
 
     Returns: [1, d] tensor — the optimized latent embedding scaled to target magnitude.
     """
@@ -46,6 +50,10 @@ def geometric_solver(
 
     # --- Precompute probability structure for losses 1 and 2 ---
     target_probs = F.softmax(target_logits / CFG.temperature, dim=-1)  # [k]
+
+    # Vocab embeddings used for similarity: normalized for cosine, raw for dot product
+    vocab_embs_sim = vocab_embs_norm if use_cosine else vocab_embs
+    target_embs_sim = target_embs_norm if use_cosine else target_embs
 
     with torch.no_grad():
         # Loss 1: all-pairs mask where p_i > p_j
@@ -77,23 +85,28 @@ def geometric_solver(
         interloper_sims_masked[~interloper_mask] = -float("inf")
         n_interlopers = min(CFG.num_interlopers, interloper_mask.sum().item())
         _, interloper_ids = torch.topk(interloper_sims_masked, n_interlopers)
-        interloper_embs_norm = vocab_embs_norm[interloper_ids]  # [n_interlopers, d]
+        interloper_embs_sim = vocab_embs_sim[interloper_ids]  # [n_interlopers, d]
 
-    # --- Initialize probe as random point on the unit sphere ---
-    latent_emb = torch.nn.Parameter(F.normalize(torch.randn(d, device=device), dim=0))
+    # --- Initialize probe ---
+    # Start on the unit sphere
+    latent_emb = torch.nn.Parameter(
+        F.normalize(torch.randn(d, device=device), dim=0)
+    )
+
     opt = optim.Adam([latent_emb], lr=CFG.lr)
 
     # --- Optimization loop ---
     for _ in range(CFG.solver_steps):
         opt.zero_grad()
 
-        latent_emb_norm = F.normalize(latent_emb.unsqueeze(0), dim=1)  # [1, d]
+        if use_cosine:
+            latent_emb_q = F.normalize(latent_emb.unsqueeze(0), dim=1)  # [1, d]
+        else:
+            latent_emb_q = latent_emb.unsqueeze(0)  # [1, d], unnormalized
 
-        # Cosine similarities
-        target_sims = (latent_emb_norm @ target_embs_norm.T).squeeze(0)  # [k]
-        interloper_sims = (latent_emb_norm @ interloper_embs_norm.T).squeeze(
-            0
-        )  # [n_interlopers]
+        # Similarities (cosine or dot product)
+        target_sims = (latent_emb_q @ target_embs_sim.T).squeeze(0)       # [k]
+        interloper_sims = (latent_emb_q @ interloper_embs_sim.T).squeeze(0)  # [n_interlopers]
 
         # =====================================================================
         # Loss 1: Target ranking loss (averaged over ordered pairs)
@@ -155,6 +168,7 @@ def latent_head_loss(
     interloper_embs_norm: torch.Tensor,  # [n_interlopers, d] — L2-normalized interloper embeddings
     target_probs: torch.Tensor,  # [k] — temperature-scaled probabilities, sorted descending
     target_magnitude: float,  # desired output norm
+    use_cosine: bool = True,  # if True, use cosine similarity; if False, use dot product
 ) -> dict:
     """
     Compute the four loss terms for training a latent head.
@@ -162,6 +176,20 @@ def latent_head_loss(
     so gradients flow back into the head's parameters.
 
     All losses are averaged by their number of elements.
+
+    Args:
+        latent_emb:            [d] or [1, d] latent head output (unnormalized)
+        target_embs_norm:      [k, d] L2-normalized target token embeddings
+        interloper_embs_norm:  [n_interlopers, d] L2-normalized interloper embeddings
+        target_probs:          [k] temperature-scaled probabilities, sorted descending
+        target_magnitude:      desired output norm (used for magnitude loss)
+        use_cosine:            if True, normalize latent_emb before similarity computation
+                               (cosine similarity); if False, use raw dot products against
+                               the provided (already normalized) embedding matrices.
+                               Note: target_embs_norm and interloper_embs_norm are always
+                               passed in normalized; set use_cosine=False to use them as
+                               unnormalized dot-product targets by passing unnormalized
+                               matrices instead.
 
     Returns a dict with individual losses and total loss.
     """
@@ -171,13 +199,14 @@ def latent_head_loss(
     k = target_embs_norm.size(0)
     n_interlopers = interloper_embs_norm.size(0)
 
-    latent_emb_norm = F.normalize(latent_emb, dim=1)  # [1, d]
+    if use_cosine:
+        latent_emb_q = F.normalize(latent_emb, dim=1)  # [1, d]
+    else:
+        latent_emb_q = latent_emb  # [1, d], unnormalized
 
-    # Cosine similarities
-    target_sims = (latent_emb_norm @ target_embs_norm.T).squeeze(0)  # [k]
-    interloper_sims = (latent_emb_norm @ interloper_embs_norm.T).squeeze(
-        0
-    )  # [n_interlopers]
+    # Similarities (cosine or dot product depending on use_cosine and passed-in matrices)
+    target_sims = (latent_emb_q @ target_embs_norm.T).squeeze(0)       # [k]
+    interloper_sims = (latent_emb_q @ interloper_embs_norm.T).squeeze(0)  # [n_interlopers]
 
     # --- Loss 1: Target ranking loss (averaged over ordered pairs) ---
     pairwise_mask = (target_probs.unsqueeze(1) > target_probs.unsqueeze(0)).float()
