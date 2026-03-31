@@ -11,14 +11,14 @@ from src.latent_embedding_experiments.algorithms.solver import geometric_solver
 from src.latent_embedding_experiments.algorithms.utils import select_targets
 
 # --- CONFIGURATION ---
-MODEL_ID = "meta-llama/Llama-3.1-8B-Instruct"
+MODEL_ID = "meta-llama/Llama-3.2-3B-Instruct"
 PROMPT = "The fundamental difference between human consciousness and artificial intelligence is"
 STEPS = 50
 DISPLAY_K_MIN = 20  # minimum rows in nearest neighbor tables
 DISPLAY_K_DIST = 20  # rows shown in the logit distribution table
 
 # Next-step embedding mode
-NEXT_STEP_EMBEDDING_DEFAULT = "solver"
+NEXT_STEP_EMBEDDING_DEFAULT = "coconut"
 NEXT_STEP_LABELS = {
     "discrete_top1": "Top-1 discrete token embedding",
     "soft_thinking": "Soft thinking (probability-weighted sum over min-p tokens)",
@@ -188,10 +188,25 @@ def run_latent_comparison_sequence(next_step_embedding: str) -> None:
                 # Centroid (unweighted mean over min-p tokens)
                 v_centroid = pool_embs.mean(dim=0, keepdim=True)
 
-                # Coconut (last hidden state)
+                # Coconut (last hidden state) — scaled to weighted target magnitude
                 v_coconut = (
                     outputs.hidden_states[-1][0, -1, :].unsqueeze(0).to(torch.float32)
                 )
+
+                # --- Compute weighted target magnitude ---
+                # Use temperature-scaled probabilities (more aligned with your generation)
+                weights = target_probs_scaled  # [k]
+
+                # Norms of target embeddings
+                target_embs = vocab_embs[target_ids]  # [k, d]
+                target_norms = target_embs.norm(p=2, dim=1)  # [k]
+
+                # Weighted sum of norms
+                target_magnitude = torch.sum(weights * target_norms)
+
+                # --- Normalize coconut and rescale ---
+                norm = v_coconut.norm(p=2, dim=1, keepdim=True).clamp_min(1e-8)
+                v_coconut = (target_magnitude * v_coconut) / norm
 
                 # --- Select next-step vector ---
                 vectors = {

@@ -288,7 +288,7 @@ with open(EXP_CFG.log_file, "w", encoding="utf-8") as f:
 
     emit("LATENT CONCEPT DESCRIPTION EXPERIMENT", f)
     emit(
-        f"Temp: {CFG.temperature} | Top-p: {CFG.top_p} | "
+        f"Temp: {CFG.temperature} | Min-p: {CFG.min_p} | "
         f"k range: [{CFG.min_k}, {CFG.max_k}] | "
         f"Solver steps: {CFG.solver_steps}",
         f,
