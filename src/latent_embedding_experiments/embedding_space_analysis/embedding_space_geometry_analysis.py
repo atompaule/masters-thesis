@@ -10,12 +10,15 @@ Includes:
      over eigenvectors of W^T W.
   4) IsoScore ι(X) from Rudman et al. (2022), arXiv:2108.07344.
   5) Intrinsic dimension (Levina–MLE) and ID / ambient_dim (ID score as in Rudman et al.).
+  6) Norm distribution: 20 equal-width bins over [min_norm, max_norm], with token
+     count and 10 random example tokens per bin.
 """
 
 from __future__ import annotations
 
 import json
 import math
+import random
 
 import torch
 import torch.nn.functional as F
@@ -79,6 +82,76 @@ def analyze_norms(embeddings, tokenizer, log_file):
     for val, idx in zip(low_vals, low_idxs):
         token = tokenizer.decode([idx])
         log(f"{val.item():.4f} | '{token}'", log_file)
+
+
+def analyze_norm_distribution(
+    embeddings: torch.Tensor,
+    tokenizer,
+    log_file,
+    n_bins: int = 20,
+    examples_per_bin: int = 10,
+    seed: int = 42,
+) -> None:
+    """
+    Divide the norm range [min, max] into n_bins equal-width bins and report:
+      - bin edges
+      - token count and fraction of vocab in each bin
+      - examples_per_bin random tokens sampled uniformly from the bin
+    """
+    log(f"\n--- 6. Norm distribution ({n_bins} bins, {examples_per_bin} examples each) ---", log_file)
+
+    rng = random.Random(seed)
+    norms = torch.norm(embeddings, dim=1)  # [V]
+    v_min = norms.min().item()
+    v_max = norms.max().item()
+    vocab_size = norms.shape[0]
+
+    edges = torch.linspace(v_min, v_max, n_bins + 1)
+
+    log(f"Norm range: [{v_min:.4f}, {v_max:.4f}]  |  vocab size: {vocab_size:,}", log_file)
+    log("", log_file)
+
+    col_norm  = 18   # bin range column
+    col_count = 10   # count column
+    col_frac  = 8    # fraction column
+    header = (
+        f"  {'bin range':^{col_norm}}  "
+        f"{'count':>{col_count}}  "
+        f"{'frac':>{col_frac}}  "
+        f"examples"
+    )
+    log(header, log_file)
+    log("  " + "─" * (len(header) + 20), log_file)
+
+    for b in range(n_bins):
+        lo = edges[b].item()
+        hi = edges[b + 1].item()
+
+        # Include right edge in the last bin so max-norm token isn't missed
+        if b < n_bins - 1:
+            mask = (norms >= lo) & (norms < hi)
+        else:
+            mask = (norms >= lo) & (norms <= hi)
+
+        indices = mask.nonzero(as_tuple=True)[0].tolist()
+        count = len(indices)
+        frac = count / vocab_size
+
+        if count == 0:
+            sample_str = "(empty)"
+        else:
+            sample_ids = rng.sample(indices, min(examples_per_bin, count))
+            tokens = [repr(tokenizer.decode([tid])) for tid in sample_ids]
+            sample_str = "  ".join(tokens)
+
+        bin_range = f"[{lo:7.3f}, {hi:7.3f})"
+        log(
+            f"  {bin_range:{col_norm}}  "
+            f"{count:{col_count},}  "
+            f"{frac:{col_frac}.4f}  "
+            f"{sample_str}",
+            log_file,
+        )
 
 
 def analyze_average_pairwise_cosine_similarity(
@@ -457,6 +530,7 @@ def main():
         log(f"Embedding dimension: {dim}", f)
 
         analyze_norms(embeddings, tokenizer, f)
+        analyze_norm_distribution(embeddings, tokenizer, f)
         analyze_average_pairwise_cosine_similarity(embeddings, f)
         analyze_pc_spectrum(embeddings, tokenizer, f)
         analyze_rajaee_partition_isotropy(embeddings, f)
