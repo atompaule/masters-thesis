@@ -2,6 +2,7 @@ import argparse
 
 import pandas as pd
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
@@ -11,17 +12,20 @@ from src.latent_embedding_experiments.algorithms.solver import geometric_solver
 from src.latent_embedding_experiments.algorithms.utils import select_targets
 
 # --- CONFIGURATION ---
-MODEL_ID = "meta-llama/Llama-3.2-3B-Instruct"
-PROMPT = "The fundamental difference between human consciousness and artificial intelligence is"
-STEPS = 50
+MODEL_ID = "meta-llama/Llama-3.1-8B-Instruct"
+PROMPT = (
+    "The ability for different species to communicate with each other is analagous to"
+)
+STEPS = 15
 DISPLAY_K_MIN = 20  # minimum rows in nearest neighbor tables
 DISPLAY_K_DIST = 20  # rows shown in the logit distribution table
 
 # Next-step embedding mode
-NEXT_STEP_EMBEDDING_DEFAULT = "coconut"
+NEXT_STEP_EMBEDDING_DEFAULT = "discrete_top1"
 NEXT_STEP_LABELS = {
     "discrete_top1": "Top-1 discrete token embedding",
     "soft_thinking": "Soft thinking (probability-weighted sum over min-p tokens)",
+    "latent_head": "Latent head MLP over last-layer hidden state",
     "solver": "Geometric solver over min-p tokens",
     "centroid": "Unweighted centroid of min-p token embeddings",
     "coconut": "Last-layer hidden state (continuous)",
@@ -29,6 +33,65 @@ NEXT_STEP_LABELS = {
 
 LOG_FILE = f"src/latent_embedding_experiments/logs/llama_8b_latent_comparison_sequence_{NEXT_STEP_EMBEDDING_DEFAULT}.txt"
 
+# Default checkpoint path — override with --latent-head-checkpoint
+LATENT_HEAD_CHECKPOINT_DEFAULT = (
+    "/work/utsch/masters-thesis/latent_embedding_experiments/latent_head/latent_head_mlp_2h.pt"
+)
+
+
+# ---------------------------------------------------------------------------
+# LatentHead definition (kept here so this script is self-contained)
+# ---------------------------------------------------------------------------
+
+class LatentHead(nn.Module):
+    """Two-layer MLP from hidden-state space into the embedding space.
+
+    Hidden state → Linear → SiLU → Linear → SiLU → Linear → embedding.
+
+    The intermediate dimension defaults to 2× the hidden dim (matching the
+    style of typical LLM MLP blocks). SiLU is used as the activation to
+    match Llama's own MLP nonlinearity.
+    """
+
+    def __init__(self, hidden_dim: int, intermediate_dim: int = 0):
+        super().__init__()
+        if intermediate_dim <= 0:
+            intermediate_dim = hidden_dim * 2
+        self.mlp = nn.Sequential(
+            nn.Linear(hidden_dim, intermediate_dim, bias=False),
+            nn.SiLU(),
+            nn.Linear(intermediate_dim, intermediate_dim, bias=False),
+            nn.SiLU(),
+            nn.Linear(intermediate_dim, hidden_dim, bias=False),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """x: [..., hidden_dim] → [..., hidden_dim]"""
+        return self.mlp(x)
+
+
+def load_latent_head(checkpoint_path: str, hidden_dim: int, device: torch.device) -> LatentHead:
+    """Load a LatentHead from a checkpoint file.
+
+    Raises RuntimeError if loading fails, since the latent head is required.
+    """
+    head = LatentHead(hidden_dim=hidden_dim)
+    state = torch.load(checkpoint_path, map_location=device)
+    # Support both raw state-dicts and {"model": state_dict} checkpoints
+    if isinstance(state, dict) and "model" in state:
+        state = state["model"]
+    elif isinstance(state, dict) and "state_dict" in state:
+        state = state["state_dict"]
+    head.load_state_dict(state)
+    head.to(device=device, dtype=torch.float32)
+    head.eval()
+    print(f"[LatentHead] Loaded from {checkpoint_path}")
+    return head
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 def emit(text, file_handle=None):
     print(text)
@@ -46,10 +109,22 @@ def parse_args():
         choices=list(NEXT_STEP_LABELS.keys()),
         help=f"Embedding fed as next input (default: {NEXT_STEP_EMBEDDING_DEFAULT}).",
     )
+    p.add_argument(
+        "--latent-head-checkpoint",
+        default=LATENT_HEAD_CHECKPOINT_DEFAULT,
+        help=(
+            "Path to the LatentHead checkpoint (.pt file). "
+            f"Defaults to {LATENT_HEAD_CHECKPOINT_DEFAULT}."
+        ),
+    )
     return p.parse_args()
 
 
-def run_latent_comparison_sequence(next_step_embedding: str) -> None:
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+def run_latent_comparison_sequence(next_step_embedding: str, latent_head_checkpoint: str) -> None:
     print(f"Loading model: {MODEL_ID}...")
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
     model = AutoModelForCausalLM.from_pretrained(
@@ -67,13 +142,15 @@ def run_latent_comparison_sequence(next_step_embedding: str) -> None:
     prompt_ids = tokenizer(PROMPT, return_tensors="pt").input_ids.to(device)
     inputs_embeds = embed_layer(prompt_ids).to(model.dtype)
 
+    # --- LatentHead (always required) ---
+    hidden_dim = model.config.hidden_size  # e.g. 4096 for Llama-3.1-8B
+    latent_head = load_latent_head(latent_head_checkpoint, hidden_dim, device)
+
     pd.set_option("display.float_format", "{:.4f}".format)
     pd.set_option("display.width", 1000)
 
     # Collect per-step target info for the summary table
-    step_targets: list[list[tuple[str, float, float]]] = (
-        []
-    )  # per step: list of (token, raw_p, scaled_p)
+    step_targets: list[list[tuple[str, float, float]]] = []
 
     with open(LOG_FILE, "w", encoding="utf-8") as f:
         emit("LLAMA 8B LATENT COMPARISON SEQUENCE LOG", f)
@@ -86,6 +163,7 @@ def run_latent_comparison_sequence(next_step_embedding: str) -> None:
             f"Next-step input: {next_step_embedding} — {NEXT_STEP_LABELS[next_step_embedding]}",
             f,
         )
+        emit(f"LatentHead: loaded from {latent_head_checkpoint}", f)
         emit("", f)
 
         context_so_far = PROMPT
@@ -104,23 +182,19 @@ def run_latent_comparison_sequence(next_step_embedding: str) -> None:
                 greedy_continuation_ids.append(greedy_id)
 
                 # --- Full distribution for display ---
-                full_probs = F.softmax(logits, dim=-1)  # [V]
-                full_probs_scaled = F.softmax(logits / CFG.temperature, dim=-1)  # [V]
+                full_probs = F.softmax(logits, dim=-1)
+                full_probs_scaled = F.softmax(logits / CFG.temperature, dim=-1)
 
                 # --- Min-p target selection (shared across all methods) ---
                 target_logits, target_ids = select_targets(logits)
                 k = len(target_ids)
 
-                # Original probabilities from the full distribution (not renormalized)
-                target_probs = full_probs[target_ids]  # [k] — raw probs
-                target_probs_scaled = full_probs_scaled[
-                    target_ids
-                ]  # [k] — temperature-scaled probs
+                target_probs = full_probs[target_ids]
+                target_probs_scaled = full_probs_scaled[target_ids]
 
                 target_words = tokenizer.batch_decode(target_ids)
                 target_ids_set = set(target_ids.tolist())
 
-                # Collect for summary table
                 step_target_info = []
                 for word, p_raw, p_scaled in zip(
                     target_words, target_probs, target_probs_scaled
@@ -139,7 +213,7 @@ def run_latent_comparison_sequence(next_step_embedding: str) -> None:
                     1, len(logits) + 1, device=device
                 )
 
-                # --- Log probability distribution (always show top DISPLAY_K_DIST) ---
+                # --- Log probability distribution ---
                 top_display_logits, top_display_ids = torch.topk(logits, DISPLAY_K_DIST)
                 top_display_probs = full_probs[top_display_ids]
                 top_display_probs_scaled = full_probs_scaled[top_display_ids]
@@ -181,6 +255,21 @@ def run_latent_comparison_sequence(next_step_embedding: str) -> None:
                 # Soft thinking (min-p)
                 v_soft = soft_thinking(logits, vocab_embs)
 
+                # LatentHead: MLP over last hidden state, rescaled to weighted target magnitude
+                last_hidden = outputs.hidden_states[-1][0, -1, :].unsqueeze(0).to(torch.float32)
+
+                # --- Compute weighted target magnitude (used for rescaling) ---
+                weights = target_probs_scaled  # [k]
+                target_embs = vocab_embs[target_ids]  # [k, d]
+                target_norms = target_embs.norm(p=2, dim=1)  # [k]
+                target_magnitude = torch.sum(weights * target_norms)
+
+                with torch.enable_grad():
+                    v_latent_head = latent_head(last_hidden.detach())  # [1, hidden_dim]
+                v_latent_head = v_latent_head.detach().float()
+                lh_norm = v_latent_head.norm(p=2, dim=1, keepdim=True).clamp_min(1e-8)
+                v_latent_head = (target_magnitude * v_latent_head) / lh_norm
+
                 # Geometric solver (min-p)
                 with torch.enable_grad():
                     v_solver = geometric_solver(logits, vocab_embs)
@@ -188,23 +277,8 @@ def run_latent_comparison_sequence(next_step_embedding: str) -> None:
                 # Centroid (unweighted mean over min-p tokens)
                 v_centroid = pool_embs.mean(dim=0, keepdim=True)
 
-                # Coconut (last hidden state) — scaled to weighted target magnitude
-                v_coconut = (
-                    outputs.hidden_states[-1][0, -1, :].unsqueeze(0).to(torch.float32)
-                )
-
-                # --- Compute weighted target magnitude ---
-                # Use temperature-scaled probabilities (more aligned with your generation)
-                weights = target_probs_scaled  # [k]
-
-                # Norms of target embeddings
-                target_embs = vocab_embs[target_ids]  # [k, d]
-                target_norms = target_embs.norm(p=2, dim=1)  # [k]
-
-                # Weighted sum of norms
-                target_magnitude = torch.sum(weights * target_norms)
-
-                # --- Normalize coconut and rescale ---
+                # Coconut: last hidden state, rescaled to weighted target magnitude
+                v_coconut = last_hidden.clone()
                 norm = v_coconut.norm(p=2, dim=1, keepdim=True).clamp_min(1e-8)
                 v_coconut = (target_magnitude * v_coconut) / norm
 
@@ -212,10 +286,12 @@ def run_latent_comparison_sequence(next_step_embedding: str) -> None:
                 vectors = {
                     "discrete_top1": v_discrete,
                     "soft_thinking": v_soft,
+                    "latent_head": v_latent_head,
                     "solver": v_solver,
                     "centroid": v_centroid,
                     "coconut": v_coconut,
                 }
+
                 next_vec = vectors[next_step_embedding].detach().float()
                 next_vec_bf16 = next_vec.to(device=device, dtype=model.dtype)
                 inputs_embeds = torch.cat(
@@ -232,13 +308,14 @@ def run_latent_comparison_sequence(next_step_embedding: str) -> None:
                 labels = [
                     "Discrete",
                     f"Soft (k={k})",
+                    "LatentHead",
                     f"Solver (k={k})",
                     f"Centroid (k={k})",
                     "Coconut",
                 ]
-                all_vecs = torch.cat(
-                    [v_discrete, v_soft, v_solver, v_centroid, v_coconut], dim=0
-                )
+                all_vecs_list = [v_discrete, v_soft, v_latent_head, v_solver, v_centroid, v_coconut]
+
+                all_vecs = torch.cat(all_vecs_list, dim=0)
                 all_vecs_unit = F.normalize(all_vecs, p=2, dim=1)
                 mags = all_vecs.norm(p=2, dim=1).cpu().numpy()
 
@@ -336,10 +413,7 @@ def run_latent_comparison_sequence(next_step_embedding: str) -> None:
         emit(f"Full: {esc(greedy_text)}", f)
         emit("=" * 140, f)
 
-        # =================================================================
-        # TARGET TOKEN SUMMARY TABLE
-        # One column per step, rows = target tokens with probabilities
-        # =================================================================
+        # --- Target token summary table ---
         emit("", f)
         emit("=" * 140, f)
         emit(
@@ -349,27 +423,21 @@ def run_latent_comparison_sequence(next_step_embedding: str) -> None:
         )
         emit("=" * 140, f)
 
-        # Find the max number of targets across all steps (= number of rows)
         max_targets = max(len(st) for st in step_targets)
-
-        # Column width per step
         step_col_width = 28
 
-        # Header: step numbers
         header = f"{'':>4} |"
         for s in range(STEPS):
             header += f" {'Step ' + str(s+1):^{step_col_width}} |"
         emit(header[:-2], f)
         emit("-" * len(header[:-2]), f)
 
-        # One row per target rank
         for rank in range(max_targets):
             row = f"{'#' + str(rank+1):>4} |"
             for s in range(STEPS):
                 targets = step_targets[s]
                 if rank < len(targets):
                     token, p_raw, p_scaled = targets[rank]
-                    # Truncate long tokens
                     if len(token) > 10:
                         token = token[:8] + ".."
                     cell = f"'{token}' {p_raw*100:.1f}/{p_scaled*100:.1f}"
@@ -384,4 +452,7 @@ def run_latent_comparison_sequence(next_step_embedding: str) -> None:
 
 if __name__ == "__main__":
     args = parse_args()
-    run_latent_comparison_sequence(args.next_step_embedding)
+    run_latent_comparison_sequence(
+        next_step_embedding=args.next_step_embedding,
+        latent_head_checkpoint=args.latent_head_checkpoint,
+    )
