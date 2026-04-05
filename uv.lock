@@ -1103,6 +1103,7 @@ dependencies = [
     { name = "peft" },
     { name = "scipy" },
     { name = "spacy" },
+    { name = "torch" },
     { name = "wandb" },
 ]
 
@@ -1117,6 +1118,7 @@ requires-dist = [
     { name = "peft", specifier = ">=0.18.0" },
     { name = "scipy", specifier = ">=1.16.3" },
     { name = "spacy", specifier = ">=3.8.13" },
+    { name = "torch", specifier = ">=2.9.1" },
     { name = "wandb", specifier = ">=0.23.0" },
 ]
 
