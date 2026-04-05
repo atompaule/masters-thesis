@@ -30,8 +30,10 @@ import torch.nn.functional as F
 from datasets import load_dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
+from src.latent_embedding_experiments.algorithms.solver import latent_head_loss
+
 DEFAULT_MODEL_ID = "meta-llama/Llama-3.1-8B-Instruct"
-LOG_FILE = "latent_embedding_experiments/logs/llama_8b_latent_head_training.txt"
+LOG_FILE = "latent_embedding_experiments/logs/llama_8b_latent_head_training_linear.txt"
 
 
 # ── Logging ────────────────────────────────────────────────────────────────────
@@ -53,23 +55,11 @@ class LatentHead(nn.Module):
     Kept intentionally small so gradient flow is clean. The output lives in the
     same dimensionality as the input token embeddings, enabling direct cosine
     similarity comparisons with the vocabulary matrix.
-
-    Fixed temperature τ = exp(log_temp) (stored as a buffer, not trained) scales cosine
-    similarities before softmax. Set via ``init_temp`` at construction.
     """
 
-    def __init__(self, hidden_dim: int, init_temp: float = 0.6):
+    def __init__(self, hidden_dim: int):
         super().__init__()
         self.proj = nn.Linear(hidden_dim, hidden_dim, bias=False)
-        # Buffer (not Parameter): follows .to(device), no optimizer step, saved in state_dict.
-        self.register_buffer(
-            "log_temp",
-            torch.tensor(math.log(init_temp), dtype=torch.float32),
-        )
-
-    @property
-    def temperature(self) -> torch.Tensor:
-        return self.log_temp.exp()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """x: [..., hidden_dim] → [..., hidden_dim]"""
@@ -152,8 +142,8 @@ def train(args: argparse.Namespace) -> None:
 
     # ── Vocabulary embeddings (normalised, static) ─────────────────────────────
     # [V, d] — kept in fp32 for stable cosine similarity computation
-    vocab_embs_raw = model.get_input_embeddings().weight.detach().float()  # [V, d]
-    vocab_embs_norm = F.normalize(vocab_embs_raw, dim=1)  # [V, d]
+    vocab_embs = model.get_input_embeddings().weight.detach().float()  # [V, d]
+    vocab_embs_norm = F.normalize(vocab_embs, dim=1)  # [V, d]
 
     # ── Dataset ────────────────────────────────────────────────────────────────
     emit(f"Loading dataset: {args.dataset} (streaming)", log_fh)
@@ -179,8 +169,17 @@ def train(args: argparse.Namespace) -> None:
     optimizer: torch.optim.Optimizer | None = None
     model_device = next(model.parameters()).device
 
+    latent_head = LatentHead(hidden_dim).to(model_device).to(torch.float32)
+
+    optimizer = torch.optim.AdamW(latent_head.parameters(), lr=args.lr)
+    vocab_embs_norm = vocab_embs_norm.to(model_device)
+    emit(
+        f"Latent head initialised on {model_device} | hidden_dim={hidden_dim} ",
+        log_fh,
+    )
+
     # ── Epoch loop ─────────────────────────────────────────────────────────────
-    global_step = 0
+    steps = 0
     running_loss = 0.0
 
     for epoch in range(1, args.n_epochs + 1):
@@ -207,129 +206,66 @@ def train(args: argparse.Namespace) -> None:
                 )
 
             hidden = outputs.hidden_states[-1]  # [B, L, d], bfloat16
-            hidden_device = hidden.device
-            B, L, _ = hidden.shape
+            logits = outputs.logits  # [B, L, V], bfloat16
 
-            # Lazy initialisation of latent head on first observed device
-            if latent_head is None:
-                latent_head = (
-                    LatentHead(hidden_dim, init_temp=args.init_temp)
-                    .to(hidden_device)
-                    .to(torch.float32)
-                )
-                optimizer = torch.optim.AdamW(latent_head.parameters(), lr=args.lr)
-                vocab_embs_norm = vocab_embs_norm.to(hidden_device)
-                emit(
-                    f"Latent head initialised on {hidden_device} | hidden_dim={hidden_dim} "
-                    f"| init τ={latent_head.temperature.item():.4f}",
-                    log_fh,
-                )
+            del outputs
+            torch.cuda.empty_cache()
 
-            # Causal shift: position i predicts token i+1 → one row per (b, t)
-            flat_len = B * (L - 1)
-            lm_logits_flat = outputs.logits[:, :-1, :].reshape(flat_len, -1)
-            hidden_flat = hidden[:, :-1, :].reshape(flat_len, -1)
-            pred_mask_flat = attention_mask[:, 1:].bool().reshape(-1)
-
-            n_valid = int(pred_mask_flat.sum().item())
-            if n_valid == 0:
-                continue
-
-            row_chunk = (
-                flat_len if args.micro_batch_rows <= 0 else args.micro_batch_rows
-            )
+            latent = F.normalize(latent_head(hidden.float()), dim=-1)  # [B, L, d]
 
             optimizer.zero_grad(set_to_none=True)
-            step_loss = 0.0
 
-            for row_start in range(0, flat_len, row_chunk):
-                row_end = min(row_start + row_chunk, flat_len)
-                chunk_mask = pred_mask_flat[row_start:row_end]
-                if not chunk_mask.any():
-                    continue
-
-                lm_logits_valid = lm_logits_flat[row_start:row_end][chunk_mask].float()
-                hidden_valid = hidden_flat[row_start:row_end][chunk_mask].float()
-
-                # ── Target p: full LM softmax ─────────────────────────────
-                with torch.no_grad():
-                    p = F.softmax(lm_logits_valid, dim=-1)  # [n, V]
-
-                # ── Student q: temperature-scaled cosine sims ─────────────
-                tau = latent_head.temperature
-                latent = F.normalize(latent_head(hidden_valid), dim=1)
-                cos_sims = latent @ vocab_embs_norm.T
-                q = F.softmax(cos_sims / tau, dim=-1)
-
-                # ── MSE distillation: sum_i (p_i − q_i)², mean over token rows ──
-                error = (p - q).abs()
-                error_loss = error.sum() / n_valid
-
-                p_min = p.min(dim=-1, keepdim=True).values
-                p_max = p.max(dim=-1, keepdim=True).values
-                p_norm = (p - p_min) / (p_max - p_min).clamp(min=1e-12)
-
-                cos_sims_magnitude_error = F.relu(cos_sims - 0.2) * (1 - p_norm)
-                cos_sims_loss = cos_sims_magnitude_error.sum() / n_valid
-
-                total_loss = error_loss + 0.001 * cos_sims_loss
-                total_loss.backward()
-                step_loss += float(total_loss.detach().item())
-
-            torch.nn.utils.clip_grad_norm_(latent_head.parameters(), 1.0)
+            loss = latent_head_loss(
+                latent, logits, vocab_embs, vocab_embs_norm, attention_mask
+            )
+            loss = loss["total_loss"]
+            loss.backward()
             optimizer.step()
 
-            running_loss += step_loss
-            global_step += 1
+            running_loss += loss.item()
+            steps += 1
             batches_this_epoch += 1
 
-            if global_step % args.log_every == 0:
+            if steps % args.log_every == 0:
                 avg_loss = running_loss / args.log_every
                 pct = 100.0 * batches_this_epoch / total_batches
                 emit(
                     f"\nepoch {epoch}/{args.n_epochs}  "
-                    f"step {global_step:6d}  "
+                    f"step {steps:6d}  "
                     f"{pct:5.1f}% of epoch  "
-                    f"loss {avg_loss:.4f}  "
-                    f"τ {latent_head.temperature.item():.4f}",
+                    f"loss {avg_loss:.4f}  ",
                     log_fh,
                 )
-                # Diagnostic: last position of the first sequence in the batch
+                # Diagnostic: middle position of the first sequence in the batch
                 with torch.no_grad():
-                    seq_len = (
-                        attention_mask[0].sum().item() - 1
-                    )  # last valid predict pos
-                    diag_h = hidden[0, seq_len - 1].float().unsqueeze(0)
+                    seq_len = attention_mask[0].sum().item() - 1
+                    diag_h = hidden[0, seq_len // 2].float().unsqueeze(0)
                     diag_l = F.normalize(latent_head(diag_h), dim=1)
                     # Raw dot product of unit vectors ∈ [-1, 1]; cos/τ is used only inside softmax (training)
                     diag_cos = (diag_l @ vocab_embs_norm.T).squeeze(0)
-                    diag_lm = outputs.logits[0, seq_len - 1]
+                    diag_lm = logits[0, seq_len // 2]
                 print_top_k_table(
                     tokenizer,
                     diag_cos,
                     diag_lm,
                     k=args.table_k,
                     fh=log_fh,
-                    latent_temperature=latent_head.temperature.detach(),
                 )
                 running_loss = 0.0
 
-            if args.save_every > 0 and global_step % args.save_every == 0:
+            if args.save_every > 0 and steps % args.save_every == 0:
                 _save(
                     latent_head,
                     hidden_dim,
                     args.output_dir,
-                    suffix=f"_step{global_step}",
+                    suffix=f"_step{steps}",
                     fh=log_fh,
                 )
 
         emit(f"Epoch {epoch} complete  ({batches_this_epoch} batches)", log_fh)
 
     # ── Final checkpoint ───────────────────────────────────────────────────────
-    if latent_head is not None:
-        _save(latent_head, hidden_dim, args.output_dir, fh=log_fh)
-    else:
-        emit("No training steps completed — check dataset / filters.", log_fh)
+    _save(latent_head, hidden_dim, args.output_dir, fh=log_fh)
 
     log_fh.close()
 
@@ -343,27 +279,12 @@ def print_top_k_table(
     lm_logits: torch.Tensor,  # [V] raw LM logits for one position
     k: int = 10,
     fh: TextIOWrapper | None = None,
-    latent_temperature: torch.Tensor | float | None = None,
 ) -> None:
-    """Print a side-by-side top-k table: latent cosine sims vs. LM logit distribution.
-
-    If ``latent_temperature`` is set, latent probabilities match training:
-    ``softmax(cos_sims / τ)``. The printed ``cos`` column stays in [-1, 1].
-    """
+    """Print a side-by-side top-k table: latent cosine sims vs. LM logit distribution."""
     cos_sims = cos_sims.float()
     lm_logits = lm_logits.float()
 
     lm_probs = torch.softmax(lm_logits, dim=-1)
-    if latent_temperature is None:
-        lat_logits = cos_sims
-    else:
-        tau = (
-            latent_temperature.float()
-            if isinstance(latent_temperature, torch.Tensor)
-            else latent_temperature
-        )
-        lat_logits = cos_sims / tau
-    lat_probs = torch.softmax(lat_logits, dim=-1)
 
     top_cos_vals, top_cos_ids = torch.topk(cos_sims, k)
     top_lm_vals, top_lm_ids = torch.topk(lm_logits, k)
@@ -372,7 +293,7 @@ def print_top_k_table(
         return repr(tokenizer.decode([tid]))
 
     header = (
-        f"{'rank':>4}  {'── latent head (cos sim) ──':30s}  {'cos':>6}  {'p':>7}"
+        f"{'rank':>4}  {'── latent head (cos sim) ──':30s}  {'cos':>6}"
         f"    {'── language head (logits) ──':30s}  {'logit':>7}  {'p':>7}"
     )
     emit(header, fh)
@@ -380,12 +301,11 @@ def print_top_k_table(
     for i in range(k):
         lat_tok = tok(top_cos_ids[i].item())
         lat_sim = top_cos_vals[i].item()
-        lat_p = lat_probs[top_cos_ids[i]].item()
         lm_tok = tok(top_lm_ids[i].item())
         lm_logit = top_lm_vals[i].item()
         lm_p = lm_probs[top_lm_ids[i]].item()
         emit(
-            f"{i+1:>4}  {lat_tok:30s}  {lat_sim:>6.4f}  {lat_p:>7.4f}"
+            f"{i+1:>4}  {lat_tok:30s}  {lat_sim:>6.4f}"
             f"    {lm_tok:30s}  {lm_logit:>7.3f}  {lm_p:>7.4f}",
             fh,
         )
@@ -443,27 +363,12 @@ def parse_args() -> argparse.Namespace:
         help="Number of sequences per training step",
     )
     p.add_argument(
-        "--micro_batch_rows",
-        type=int,
-        default=512,
-        help=(
-            "Max token rows per backward pass after flattening (B×(L−1)). "
-            "Splits the [N,V] cosine/MSE graph to reduce VRAM; use 0 for one chunk (full N)."
-        ),
-    )
-    p.add_argument(
-        "--init_temp",
-        type=float,
-        default=0.07,
-        help="Fixed τ; cosine sims are divided by τ before vocab softmax (stored as non-trainable buffer)",
-    )
-    p.add_argument(
         "--log_every", type=int, default=20, help="Loss logging interval (steps)"
     )
     p.add_argument(
         "--table_k",
         type=int,
-        default=10,
+        default=30,
         help="Rows in the diagnostic similarity table",
     )
     p.add_argument(
