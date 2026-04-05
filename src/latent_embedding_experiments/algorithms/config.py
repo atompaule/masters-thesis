@@ -28,7 +28,7 @@ class Config:
     # Loss 3: Interloper similarity loss
     # Pushes interloper similarities below the weakest target's similarity
     interloper_weight: float = 5.0
-    interloper_margin_relative: float = 1 / 5
+    interloper_margin_threshold: float = 0.2
 
     # Loss 4: Target similarity loss
     # Pulls the embedding toward all target tokens (unweighted)
