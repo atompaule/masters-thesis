@@ -84,10 +84,7 @@ def geometric_solver(
     for _ in range(CFG.solver_steps):
         opt.zero_grad()
 
-        if use_cosine:
-            latent_emb_q = F.normalize(latent_emb.unsqueeze(0), dim=1)  # [1, d]
-        else:
-            latent_emb_q = latent_emb.unsqueeze(0)  # [1, d], unnormalized
+        latent_emb_q = F.normalize(latent_emb.unsqueeze(0), dim=1)  # [1, d]
 
         target_sims = (latent_emb_q @ target_embs_sim.T).squeeze(0)  # [k]
         interloper_sims = (latent_emb_q @ interloper_embs_sim.T).squeeze(
