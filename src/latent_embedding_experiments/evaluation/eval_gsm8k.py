@@ -2,8 +2,10 @@
 eval_gsm8k_latent.py
 
 Evaluate a custom embedding approach on GSM8K.
+Supports temperature-based multinomial sampling and pass@k evaluation.
 """
 
+import json
 import re
 
 import torch
@@ -31,20 +33,27 @@ from src.latent_embedding_experiments.algorithms.utils import emit, select_targe
 # CONFIG
 # ---------------------------------------------------------------------------
 
-APPROACH = "discrete_top1"
+APPROACH = "soft_thinking"
 
-MAX_SAMPLES = 200
+MAX_SAMPLES = 20
 MAX_NEW_TOKENS = 1024
 
 N_INTERLOPERS = 10
 TARGET_SIM = 0.90
 
+# Sampling config
+# TEMPERATURE = 0.0 means greedy (argmax). > 0 enables multinomial sampling.
+TEMPERATURE = 0.0
+# Number of independent samples per question. pass@k is correct if any is correct.
+PASS_K = 1
+
 DEVICE = "cuda"
 
 LOG_FILE = (
     "src/latent_embedding_experiments/logs/"
-    f"llama_8b_eval_gsm8k_{APPROACH}_{TARGET_SIM}.txt"
+    f"llama_8b_eval_gsm8k_{APPROACH}_{TARGET_SIM}_t{TEMPERATURE}_pass{PASS_K}.txt"
 )
+JSON_FILE = LOG_FILE.replace(".txt", ".json")
 
 
 # ---------------------------------------------------------------------------
@@ -57,10 +66,11 @@ def extract_number(text: str):
     Extract the answer number from model output.
     We strip commas immediately to prevent our regexes from choking.
     """
-    # Exorcise all commas before the regex hunt begins
     text_clean = text.replace(",", "")
-    
-    answer_match = re.search(r"answer\s*:\s*(.*)", text_clean, re.IGNORECASE | re.DOTALL)
+
+    answer_match = re.search(
+        r"answer\s*:\s*(.*)", text_clean, re.IGNORECASE | re.DOTALL
+    )
     if answer_match:
         answer_text = answer_match.group(1)
         boxed = re.search(r"\\boxed\{(-?\d+\.?\d*)\}", answer_text)
@@ -70,40 +80,31 @@ def extract_number(text: str):
         if nums:
             return nums[0]
 
-    # Fallback: last boxed anywhere
     boxed_all = re.findall(r"\\boxed\{(-?\d+\.?\d*)\}", text_clean)
     if boxed_all:
         return boxed_all[-1]
 
-    # Final fallback: last number in full text
     matches = re.findall(r"-?\d+\.?\d*", text_clean)
     return matches[-1] if matches else None
 
 
-def normalize_answer(ans: str):
-    """
-    Cleans the string and distills it down to its purest numeric form,
-    stripping away phantom decimals so '75.00' and '75' shake hands.
-    """
-    # Scrub the dirt (spaces and commas)
+def normalize_answer(ans: str) -> str:
     clean_str = ans.strip().replace(",", "")
-
     try:
-        # Weigh it as a true mathematical entity
         num = float(clean_str)
-
-        # If it's a perfectly whole number wearing a decimal disguise (like 75.0),
-        # shatter the disguise and return the integer.
         if num.is_integer():
             return str(int(num))
-
-        # Otherwise, let it keep its valid decimals
         return str(num)
-
     except ValueError:
-        # If the model hallucinates total garbage or weird text we can't cast to a float,
-        # just return the cleaned string and let it naturally fail the equality check.
         return clean_str
+
+
+def sample_token(logits: torch.Tensor, temperature: float) -> int:
+    """Greedy argmax if temperature == 0, otherwise temperature softmax + multinomial."""
+    if temperature == 0.0:
+        return int(torch.argmax(logits).item())
+    probs = F.softmax(logits / temperature, dim=-1)
+    return int(torch.multinomial(probs, num_samples=1).item())
 
 
 # ---------------------------------------------------------------------------
@@ -111,13 +112,17 @@ def normalize_answer(ans: str):
 # ---------------------------------------------------------------------------
 
 
-def generate_with_approach(model, tokenizer, question, vocab_embs, vocab_embs_norm):
+def generate_with_approach(
+    model,
+    tokenizer,
+    question: str,
+    vocab_embs: torch.Tensor,
+    vocab_embs_norm: torch.Tensor,
+    temperature: float,
+) -> str:
     device = next(model.parameters()).device
     embed_layer = model.get_input_embeddings()
 
-    # ---------------------------
-    # Phase 0: initial prompt
-    # ---------------------------
     prompt = (
         f"Answer the following question. "
         f"First reason through it under 'reasoning: ', then give your final numeric answer under 'answer: ' "
@@ -128,7 +133,6 @@ def generate_with_approach(model, tokenizer, question, vocab_embs, vocab_embs_no
     input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(device)
     inputs_embeds = embed_layer(input_ids)
 
-    # Initial forward pass (build KV cache)
     with torch.no_grad():
         outputs = model(inputs_embeds=inputs_embeds, use_cache=True)
     past_key_values = outputs.past_key_values
@@ -136,25 +140,19 @@ def generate_with_approach(model, tokenizer, question, vocab_embs, vocab_embs_no
 
     generated_text = ""
 
-    # ---------------------------
-    # Single generation loop
-    # ---------------------------
     for _ in range(MAX_NEW_TOKENS):
-        greedy_id = int(torch.argmax(logits).item())
+        greedy_id = sample_token(logits, temperature)
         token = tokenizer.decode([greedy_id])
         generated_text += token
 
-        # stop at EOS
         if greedy_id == tokenizer.eos_token_id:
             break
 
-        # stop once the answer box is complete
-        if re.search(
-            r"answer\s*:\s*\$\\boxed\{[^}]+\}", generated_text, re.IGNORECASE
-        ):
+        if re.search(r"answer\s*:\s*\$\\boxed\{[^}]+\}", generated_text, re.IGNORECASE):
             break
 
-        # --- target selection ---
+        # --- target selection (always based on greedy_id for embedding direction) ---
+        top1_magnitude = vocab_embs[greedy_id].norm(p=2)
         target_logits, target_ids = select_targets(logits)
         target_probs = F.softmax(logits[target_ids] / CFG.temperature, dim=-1)
 
@@ -162,7 +160,7 @@ def generate_with_approach(model, tokenizer, question, vocab_embs, vocab_embs_no
         target_norms = pool_embs.norm(p=2, dim=1)
         target_magnitude = torch.sum(target_probs * target_norms)
 
-        # --- build vector ---
+        # --- build next embedding vector ---
         if APPROACH == "discrete_top1":
             next_vec = vocab_embs[greedy_id].unsqueeze(0)
 
@@ -171,7 +169,7 @@ def generate_with_approach(model, tokenizer, question, vocab_embs, vocab_embs_no
                 greedy_id,
                 vocab_embs,
                 vocab_embs_norm,
-                target_magnitude,
+                top1_magnitude,
                 N_INTERLOPERS,
                 TARGET_SIM,
             )
@@ -228,7 +226,7 @@ def generate_with_approach(model, tokenizer, question, vocab_embs, vocab_embs_no
 
         with torch.no_grad():
             outputs = model(
-                inputs_embeds=next_vec.unsqueeze(0),  # [1,1,d]
+                inputs_embeds=next_vec.unsqueeze(0),  # [1, 1, d]
                 past_key_values=past_key_values,
                 use_cache=True,
             )
@@ -247,6 +245,12 @@ def generate_with_approach(model, tokenizer, question, vocab_embs, vocab_embs_no
 def main():
     with open(LOG_FILE, "w", encoding="utf-8") as f:
         emit(f"Loading model: {CFG.model_id}", f)
+        emit(
+            f"APPROACH={APPROACH} | TARGET_SIM={TARGET_SIM} | "
+            f"N_INTERLOPERS={N_INTERLOPERS} | TEMPERATURE={TEMPERATURE} | PASS_K={PASS_K}",
+            f,
+        )
+
         tokenizer = AutoTokenizer.from_pretrained(CFG.model_id)
         model = AutoModelForCausalLM.from_pretrained(
             CFG.model_id, torch_dtype=torch.bfloat16, device_map="auto"
@@ -256,11 +260,12 @@ def main():
         vocab_embs = model.get_input_embeddings().weight.detach().float()
         vocab_embs_norm = F.normalize(vocab_embs, dim=1)
 
-        emit("Loading GSM8K...")
+        emit("Loading GSM8K...", f)
         dataset = load_dataset("gsm8k", "main", split="test")
 
         correct = 0
         total = 0
+        results: list[dict] = []
 
         for i, sample in enumerate(dataset):
             if i >= MAX_SAMPLES:
@@ -269,34 +274,70 @@ def main():
             question = sample["question"]
             gt_answer = extract_number(sample["answer"])
 
-            pred_text = generate_with_approach(
-                model, tokenizer, question, vocab_embs, vocab_embs_norm
-            )
-            pred_answer = extract_number(pred_text)
-
-            is_correct = (
-                pred_answer is not None
-                and gt_answer is not None
-                and normalize_answer(pred_answer) == normalize_answer(gt_answer)
-            )
-
-            correct += int(is_correct)
-            total += 1
-
             emit(f"\n{'='*60}", f)
             emit(f"[{i+1}] Q: {question}", f)
-            emit(f"--- response ---\n{pred_text}", f)
-            emit(f"--- result ---", f)
+            emit(f"GT: {gt_answer}", f)
+
+            # --- Run PASS_K independent samples ---
+            any_correct = False
+            for k in range(PASS_K):
+                pred_text = generate_with_approach(
+                    model, tokenizer, question, vocab_embs, vocab_embs_norm, TEMPERATURE
+                )
+                pred_answer = extract_number(pred_text)
+
+                is_correct = (
+                    pred_answer is not None
+                    and gt_answer is not None
+                    and normalize_answer(pred_answer) == normalize_answer(gt_answer)
+                )
+
+                if is_correct:
+                    any_correct = True
+
+                emit(f"--- sample {k+1}/{PASS_K} ---", f)
+                emit(pred_text, f)
+                emit(
+                    f"Pred: {pred_answer} | {'✅' if is_correct else '❌'}",
+                    f,
+                )
+
+                if any_correct:
+                    break
+
+            correct += int(any_correct)
+            total += 1
+            results.append({"index": i + 1, "gt": gt_answer, "pass_at_k": any_correct})
+
             emit(
-                f"GT: {gt_answer} | Pred: {pred_answer} | {'✅' if is_correct else '❌'}",
+                f"--- result (pass@{PASS_K}) ---",
+                f,
+            )
+            emit(
+                f"GT: {gt_answer} | {'✅ (any correct)' if any_correct else '❌ (all wrong)'}",
                 f,
             )
 
         acc = correct / total
         emit("\n" + "=" * 50, f)
         emit(f"APPROACH: {APPROACH}", f)
-        emit(f"Accuracy: {acc:.4f} ({correct}/{total})", f)
+        emit(f"TEMPERATURE: {TEMPERATURE} | PASS_K: {PASS_K}", f)
+        emit(f"pass@{PASS_K} accuracy: {acc:.4f} ({correct}/{total})", f)
         emit("=" * 50, f)
+
+    json_payload = {
+        "approach": APPROACH,
+        "target_sim": TARGET_SIM,
+        "n_interlopers": N_INTERLOPERS,
+        "temperature": TEMPERATURE,
+        "pass_k": PASS_K,
+        "accuracy": acc,
+        "correct": correct,
+        "total": total,
+        "results": results,
+    }
+    with open(JSON_FILE, "w", encoding="utf-8") as jf:
+        json.dump(json_payload, jf, indent=2)
 
 
 if __name__ == "__main__":
