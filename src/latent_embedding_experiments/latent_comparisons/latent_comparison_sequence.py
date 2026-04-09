@@ -13,22 +13,24 @@ Usage
     python latent_comparison_sequence.py --next-step-embedding discrete_cleaned
 """
 
-import argparse
-
 import pandas as pd
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from src.latent_embedding_experiments.algorithms.config import CFG
-from src.latent_embedding_experiments.algorithms.deterministic_token_cleaning import (
-    clean_subspace_proj_slerp,
-    derive_interlopers,
+from src.latent_embedding_experiments.algorithms.discrete_sharpened import (
+    discrete_sharpened,
+    discrete_sharpened_dot_rescaled,
 )
+from src.latent_embedding_experiments.algorithms.latent_head import load_latent_head
 from src.latent_embedding_experiments.algorithms.soft_thinking import (
     soft_thinking,
     soft_thinking_normalized,
+)
+from src.latent_embedding_experiments.algorithms.soft_thinking_sharpened import (
+    soft_thinking_sharpened_aggregate,
+    soft_thinking_sharpened_per_token,
 )
 from src.latent_embedding_experiments.algorithms.solver import geometric_solver
 from src.latent_embedding_experiments.algorithms.utils import select_targets
@@ -51,216 +53,6 @@ LOG_FILE = (
 )
 
 LATENT_HEAD_CHECKPOINT = "/work/utsch/masters-thesis/latent_embedding_experiments/latent_head/latent_head_mlp_2h.pt"
-
-
-# ---------------------------------------------------------------------------
-# LatentHead
-# ---------------------------------------------------------------------------
-
-
-class LatentHead(nn.Module):
-    """Two-layer MLP from hidden-state space into the embedding space."""
-
-    def __init__(self, hidden_dim: int, intermediate_dim: int = 0):
-        super().__init__()
-        if intermediate_dim <= 0:
-            intermediate_dim = hidden_dim * 2
-        self.mlp = nn.Sequential(
-            nn.Linear(hidden_dim, intermediate_dim, bias=False),
-            nn.SiLU(),
-            nn.Linear(intermediate_dim, intermediate_dim, bias=False),
-            nn.SiLU(),
-            nn.Linear(intermediate_dim, hidden_dim, bias=False),
-        )
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.mlp(x)
-
-
-def load_latent_head(
-    checkpoint_path: str, hidden_dim: int, device: torch.device
-) -> LatentHead:
-    head = LatentHead(hidden_dim=hidden_dim)
-    state = torch.load(checkpoint_path, map_location=device)
-    if isinstance(state, dict) and "model" in state:
-        state = state["model"]
-    elif isinstance(state, dict) and "state_dict" in state:
-        state = state["state_dict"]
-    head.load_state_dict(state)
-    head.to(device=device, dtype=torch.float32)
-    head.eval()
-    print(f"[LatentHead] Loaded from {checkpoint_path}")
-    return head
-
-
-# ---------------------------------------------------------------------------
-# Discrete cleaned
-# ---------------------------------------------------------------------------
-
-
-def discrete_cleaned(
-    top1_id: int,
-    vocab_embs: torch.Tensor,
-    vocab_embs_norm: torch.Tensor,
-    target_magnitude: torch.Tensor,
-    n_interlopers: int,
-    target_sim: float,
-) -> torch.Tensor:
-    """Clean the greedy top-1 token embedding via subspace projection + slerp.
-
-    Derives the top-n nearest neighbors of the token from the embedding matrix
-    (excluding the token itself), projects out their subspace, then slerps back
-    to target_sim cosine similarity with the original token.
-
-    Returns a [1, d] tensor rescaled to target_magnitude.
-    """
-    e = vocab_embs_norm[top1_id]  # [d], unit norm
-
-    cos_sims = vocab_embs_norm @ e
-    cos_sims[top1_id] = -1.0
-    int_ids = torch.topk(cos_sims, n_interlopers).indices.tolist()
-    int_embs = vocab_embs_norm[int_ids]  # [n, d]
-
-    e_clean = clean_subspace_proj_slerp(e, int_embs, target_sim=target_sim)  # [d]
-
-    norm = e_clean.norm(p=2).clamp_min(1e-8)
-    return (target_magnitude * e_clean / norm).unsqueeze(0)  # [1, d]
-
-
-def discrete_cleaned_dot_rescaled(
-    top1_id: int,
-    vocab_embs: torch.Tensor,
-    vocab_embs_norm: torch.Tensor,
-    target_magnitude: torch.Tensor,
-    n_interlopers: int,
-    target_sim: float,
-) -> torch.Tensor:
-    """Clean via subspace proj + slerp, then rescale so dot product to the
-    original token equals the original token's self-dot-product (||e||^2).
-
-    After cleaning we have a unit-norm vector e_clean with cosine similarity
-    target_sim to e. We want:
-
-        dot(s * e_clean, e) = dot(e, e) = ||e||^2
-
-    Solving for s:
-
-        s = ||e||^2 / dot(e_clean, e)
-          = ||e||^2 / (target_sim * ||e_clean|| * ||e||)
-          = ||e|| / target_sim          (since ||e_clean|| = 1)
-
-    This ensures the model sees the same dot-product signal toward the target
-    token as it would from the original embedding, while still benefiting from
-    the reduced interloper similarity in direction.
-
-    Returns a [1, d] tensor.
-    """
-    e = vocab_embs[top1_id]          # [d], unnormalized
-    e_norm = vocab_embs_norm[top1_id]  # [d], unit norm
-
-    cos_sims = vocab_embs_norm @ e_norm
-    cos_sims[top1_id] = -1.0
-    int_ids = torch.topk(cos_sims, n_interlopers).indices.tolist()
-    int_embs = vocab_embs_norm[int_ids]  # [n, d]
-
-    e_clean = clean_subspace_proj_slerp(e_norm, int_embs, target_sim=target_sim)  # [d], unit norm
-
-    # Rescale so dot(result, e) == ||e||^2
-    # s = ||e|| / target_sim
-    e_mag = e.norm(p=2).clamp_min(1e-8)
-    s = e_mag / max(target_sim, 1e-8)
-    return (s * e_clean).unsqueeze(0)  # [1, d]
-
-
-# ---------------------------------------------------------------------------
-# Clean soft thinking
-# ---------------------------------------------------------------------------
-
-
-def clean_soft_thinking(
-    vocab_embs: torch.Tensor,
-    vocab_embs_norm: torch.Tensor,
-    target_ids: torch.Tensor,
-    target_probs_scaled: torch.Tensor,
-    target_magnitude: torch.Tensor,
-    n_interlopers: int,
-    target_sim: float,
-) -> torch.Tensor:
-    target_ids_set = set(target_ids.tolist())
-
-    cleaned = []
-    for tid in target_ids.tolist():
-        e = vocab_embs_norm[tid]  # [d]
-
-        cos_sims = vocab_embs_norm @ vocab_embs_norm[tid]
-        for t in target_ids_set:
-            cos_sims[t] = -1.0
-
-        int_ids = torch.topk(cos_sims, n_interlopers).indices.tolist()
-        int_embs = vocab_embs_norm[int_ids]
-
-        e_clean = clean_subspace_proj_slerp(e, int_embs, target_sim=0.97)
-        cleaned.append(e_clean)
-
-    cleaned_stack = torch.stack(cleaned, dim=0)  # [k, d]
-    weights = target_probs_scaled.to(cleaned_stack.dtype)
-    aggregate = (weights.unsqueeze(1) * cleaned_stack).sum(dim=0)
-
-    norm = aggregate.norm(p=2).clamp_min(1e-8)
-    return (target_magnitude * aggregate / norm).unsqueeze(0)
-
-
-def clean_soft_thinking_aggregate(
-    v_soft: torch.Tensor,
-    vocab_embs: torch.Tensor,
-    vocab_embs_norm: torch.Tensor,
-    target_ids: torch.Tensor,
-    target_probs_scaled: torch.Tensor,
-    target_magnitude: torch.Tensor,
-    n_interlopers: int,
-    target_sim: float,
-) -> torch.Tensor:
-    target_ids_set = set(target_ids.tolist())
-
-    v_norm = F.normalize(v_soft.unsqueeze(0), dim=1).squeeze(0)
-
-    cos_sims = vocab_embs_norm @ v_norm
-    for tid in target_ids_set:
-        cos_sims[tid] = -1.0
-
-    int_ids = torch.topk(cos_sims, n_interlopers).indices.tolist()
-    int_embs_norm = vocab_embs_norm[int_ids]  # [n, d]
-
-    A = int_embs_norm.T
-    Q, _ = torch.linalg.qr(A)
-
-    v_tilde = v_norm - Q @ (Q.T @ v_norm)
-    v_tilde = F.normalize(v_tilde.unsqueeze(0), dim=1).squeeze(0)
-
-    target_centroid = F.normalize(
-        (target_probs_scaled.unsqueeze(1) * vocab_embs_norm[target_ids]).sum(dim=0),
-        dim=0,
-    )
-
-    cos_phi = (v_tilde @ target_centroid).clamp(-1, 1)
-    phi = torch.arccos(cos_phi)
-
-    if phi < 1e-6:
-        v_out = v_tilde
-    else:
-        alpha = (
-            1.0
-            - torch.arccos(torch.tensor(target_sim, dtype=phi.dtype)).item()
-            / phi.item()
-        )
-        alpha = max(0.0, min(1.0, alpha))
-        v_out = (
-            torch.sin((1 - alpha) * phi) * v_tilde
-            + torch.sin(alpha * phi) * target_centroid
-        )
-
-    return (target_magnitude * v_out).unsqueeze(0)
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -432,7 +224,7 @@ def run_latent_comparison_sequence(
                     return key in approaches or key == next_step_embedding
 
                 v_discrete_cleaned = (
-                    discrete_cleaned(
+                    discrete_sharpened(
                         top1_id=greedy_id,
                         vocab_embs=vocab_embs,
                         vocab_embs_norm=vocab_embs_norm,
@@ -445,7 +237,7 @@ def run_latent_comparison_sequence(
                 )
 
                 v_discrete_cleaned_dr = (
-                    discrete_cleaned_dot_rescaled(
+                    discrete_sharpened_dot_rescaled(
                         top1_id=greedy_id,
                         vocab_embs=vocab_embs,
                         vocab_embs_norm=vocab_embs_norm,
@@ -472,7 +264,7 @@ def run_latent_comparison_sequence(
                 )
 
                 v_clean_soft = (
-                    clean_soft_thinking(
+                    soft_thinking_sharpened_per_token(
                         vocab_embs=vocab_embs,
                         vocab_embs_norm=vocab_embs_norm,
                         target_ids=target_ids,
@@ -486,7 +278,7 @@ def run_latent_comparison_sequence(
                 )
 
                 v_clean_soft_agg = (
-                    clean_soft_thinking_aggregate(
+                    soft_thinking_sharpened_aggregate(
                         v_soft=v_soft_normalized.squeeze(0),
                         vocab_embs=vocab_embs,
                         vocab_embs_norm=vocab_embs_norm,
@@ -504,7 +296,9 @@ def run_latent_comparison_sequence(
                     with torch.enable_grad():
                         v_latent_head = latent_head(last_hidden.detach())
                     v_latent_head = v_latent_head.detach().float()
-                    lh_norm = v_latent_head.norm(p=2, dim=1, keepdim=True).clamp_min(1e-8)
+                    lh_norm = v_latent_head.norm(p=2, dim=1, keepdim=True).clamp_min(
+                        1e-8
+                    )
                     v_latent_head = (target_magnitude * v_latent_head) / lh_norm
                 else:
                     v_latent_head = None
@@ -528,17 +322,17 @@ def run_latent_comparison_sequence(
 
                 # --- Select next-step vector ---
                 vectors = {
-                    "discrete_top1":              v_discrete,
-                    "discrete_cleaned":           v_discrete_cleaned,
+                    "discrete_top1": v_discrete,
+                    "discrete_cleaned": v_discrete_cleaned,
                     "discrete_cleaned_dot_rescaled": v_discrete_cleaned_dr,
-                    "soft_thinking":              v_soft,
-                    "soft_thinking_normalized":   v_soft_normalized,
-                    "clean_soft":                 v_clean_soft,
-                    "clean_soft_aggregate":       v_clean_soft_agg,
-                    "latent_head":                v_latent_head,
-                    "solver":                     v_solver,
-                    "centroid":                   v_centroid,
-                    "coconut":                    v_coconut,
+                    "soft_thinking": v_soft,
+                    "soft_thinking_normalized": v_soft_normalized,
+                    "clean_soft": v_clean_soft,
+                    "clean_soft_aggregate": v_clean_soft_agg,
+                    "latent_head": v_latent_head,
+                    "solver": v_solver,
+                    "centroid": v_centroid,
+                    "coconut": v_coconut,
                 }
 
                 next_vec = vectors[next_step_embedding].detach().float()
@@ -556,20 +350,28 @@ def run_latent_comparison_sequence(
 
                 # --- Cross-similarity matrix (only active approaches) ---
                 approach_display = {
-                    "discrete_top1":              ("Discrete",           v_discrete),
-                    "discrete_cleaned":           ("DiscCleaned",        v_discrete_cleaned),
-                    "discrete_cleaned_dot_rescaled": ("DiscCleanedDR",   v_discrete_cleaned_dr),
-                    "soft_thinking":              (f"Soft (k={k})",      v_soft),
-                    "soft_thinking_normalized":   (f"SoftNorm (k={k})",  v_soft_normalized),
-                    "clean_soft":                 (f"CleanSoft (k={k})", v_clean_soft),
-                    "clean_soft_aggregate":       (f"CleanSoftAgg (k={k})", v_clean_soft_agg),
-                    "latent_head":                ("LatentHead",         v_latent_head),
-                    "solver":                     (f"Solver (k={k})",    v_solver),
-                    "centroid":                   (f"Centroid (k={k})",  v_centroid),
-                    "coconut":                    ("Coconut",            v_coconut),
+                    "discrete_top1": ("Discrete", v_discrete),
+                    "discrete_cleaned": ("DiscCleaned", v_discrete_cleaned),
+                    "discrete_cleaned_dot_rescaled": (
+                        "DiscCleanedDR",
+                        v_discrete_cleaned_dr,
+                    ),
+                    "soft_thinking": (f"Soft (k={k})", v_soft),
+                    "soft_thinking_normalized": (
+                        f"SoftNorm (k={k})",
+                        v_soft_normalized,
+                    ),
+                    "clean_soft": (f"CleanSoft (k={k})", v_clean_soft),
+                    "clean_soft_aggregate": (f"CleanSoftAgg (k={k})", v_clean_soft_agg),
+                    "latent_head": ("LatentHead", v_latent_head),
+                    "solver": (f"Solver (k={k})", v_solver),
+                    "centroid": (f"Centroid (k={k})", v_centroid),
+                    "coconut": ("Coconut", v_coconut),
                 }
 
-                active = [k for k in CFG.approaches if approach_display[k][1] is not None]
+                active = [
+                    k for k in CFG.approaches if approach_display[k][1] is not None
+                ]
                 labels = [approach_display[k][0] for k in active]
                 all_vecs_list = [approach_display[k][1] for k in active]
 
