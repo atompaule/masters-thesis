@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -33,6 +33,20 @@ class Config:
     # Loss 4: Target similarity loss
     # Pulls the embedding toward all target tokens (unweighted)
     target_sim_weight: float = 1.0
+
+    approaches: list[str] = field(default_factory=lambda: [
+        "discrete_top1",
+        "discrete_cleaned",
+        "discrete_cleaned_dot_rescaled",
+        "soft_thinking",
+        # "soft_thinking_normalized",
+        "clean_soft",
+        "clean_soft_aggregate",
+        # "latent_head",
+        "solver",
+        # "centroid",
+        # "coconut",
+    ])
 
 
 CFG = Config()
