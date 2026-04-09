@@ -1,16 +1,7 @@
 """
 latent_comparison_sequence.py
 
-Autoregressive generation using different embedding strategies, including
-clean soft thinking: per-token subspace projection slerp cleaning followed
-by classic probability-weighted soft thinking aggregation.
-
-Usage
------
-    python latent_comparison_sequence.py --next-step-embedding clean_soft
-    python latent_comparison_sequence.py --next-step-embedding clean_soft \\
-        --n-interlopers 10 --target-sim 0.9
-    python latent_comparison_sequence.py --next-step-embedding discrete_cleaned
+Autoregressive generation using different embedding strategies.
 """
 
 import pandas as pd
@@ -352,20 +343,14 @@ def run_latent_comparison_sequence(
                 approach_display = {
                     "discrete_top1": ("Discrete", v_discrete),
                     "discrete_cleaned": ("DiscCleaned", v_discrete_cleaned),
-                    "discrete_cleaned_dot_rescaled": (
-                        "DiscCleanedDR",
-                        v_discrete_cleaned_dr,
-                    ),
-                    "soft_thinking": (f"Soft (k={k})", v_soft),
-                    "soft_thinking_normalized": (
-                        f"SoftNorm (k={k})",
-                        v_soft_normalized,
-                    ),
-                    "clean_soft": (f"CleanSoft (k={k})", v_clean_soft),
-                    "clean_soft_aggregate": (f"CleanSoftAgg (k={k})", v_clean_soft_agg),
+                    "discrete_cleaned_dot_rescaled": ("DiscCleanedDR", v_discrete_cleaned_dr),
+                    "soft_thinking": ("Soft", v_soft),
+                    "soft_thinking_normalized": ("SoftNorm", v_soft_normalized),
+                    "clean_soft": ("CleanSoft", v_clean_soft),
+                    "clean_soft_aggregate": ("CleanSoftAgg", v_clean_soft_agg),
                     "latent_head": ("LatentHead", v_latent_head),
-                    "solver": (f"Solver (k={k})", v_solver),
-                    "centroid": (f"Centroid (k={k})", v_centroid),
+                    "solver": ("Solver", v_solver),
+                    "centroid": ("Centroid", v_centroid),
                     "coconut": ("Coconut", v_coconut),
                 }
 
