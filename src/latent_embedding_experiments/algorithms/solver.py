@@ -9,7 +9,7 @@ from src.latent_embedding_experiments.algorithms.utils import select_targets
 def geometric_solver(
     logits: torch.Tensor,  # [V] — raw logits from LLM
     vocab_embs: torch.Tensor,  # [V, d] — token embedding matrix (unnormalized)
-    use_cosine: bool = True,  # if True, use cosine similarity; if False, use dot product
+    use_cosine: bool = False,  # if True, use cosine similarity; if False, use dot product
 ) -> torch.Tensor:
     """
     Geometric solver that optimizes a latent embedding to satisfy four loss terms:
@@ -123,7 +123,7 @@ def geometric_solver(
         loss_target = -CFG.target_sim_weight * target_sims.sum() / k
 
         # Total loss
-        loss = loss_rank + loss_margin + loss_interloper + loss_target
+        loss = loss_rank + loss_margin + loss_target + loss_interloper
         loss.backward()
         opt.step()
 
@@ -140,7 +140,7 @@ def latent_head_loss(
     vocab_embs: torch.Tensor,  # [V, d] — token embedding matrix (unnormalized)
     vocab_embs_norm: torch.Tensor,  # [V, d] — token embedding matrix (normalized)
     attention_mask: torch.Tensor,  # [B, L] — 1 for real tokens, 0 for padding
-    use_cosine: bool = True,
+    use_cosine: bool = False,
 ) -> dict:
     device = logits.device
     B, L, _ = latent.shape
@@ -167,10 +167,7 @@ def latent_head_loss(
     target_probs = target_probs * valid_mask.float()  # zero out padding
 
     # ── Latent query ───────────────────────────────────────────────────────────
-    if use_cosine:
-        latent_emb_q = F.normalize(latent, dim=-1)  # [B, L, d]
-    else:
-        latent_emb_q = latent  # [B, L, d]
+    latent_emb_q = F.normalize(latent, dim=-1)  # [B, L, d]
 
     # target_sims[b, l, i] = sim(latent[b,l], target_emb[b,l,i])
     target_sims = torch.einsum(
@@ -267,7 +264,7 @@ def latent_head_loss(
         / n_valid
     )
 
-    total_loss = loss_rank + loss_margin + loss_interloper + loss_target
+    total_loss = loss_rank + loss_margin + loss_target + loss_interloper
 
     return {
         "loss_rank": loss_rank,
