@@ -141,3 +141,5 @@ experiments/
 wandb/
 
 *.code-workspace
+
+logs/*

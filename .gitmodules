@@ -1,6 +1,0 @@
-[submodule "src/external/trl"]
-	path = src/external/trl
-	url = https://github.com/atompaule/trl.git
-[submodule "src/external/transformers"]
-	path = src/external/transformers
-	url = https://github.com/atompaule/transformers.git
