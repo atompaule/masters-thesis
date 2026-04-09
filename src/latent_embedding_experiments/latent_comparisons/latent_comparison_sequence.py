@@ -27,7 +27,6 @@ from src.latent_embedding_experiments.algorithms.solver import geometric_solver
 from src.latent_embedding_experiments.algorithms.utils import select_targets
 
 # --- CONFIGURATION ---
-MODEL_ID = "meta-llama/Llama-3.1-8B-Instruct"
 PROMPT = "The fundamental difference between humans and artificial intelligence is"
 STEPS = 50
 DISPLAY_K_MIN = 20
@@ -67,10 +66,10 @@ def run_latent_comparison_sequence(
     n_interlopers: int,
     target_sim: float,
 ) -> None:
-    print(f"Loading model: {MODEL_ID}...")
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
+    print(f"Loading model: {CFG.model_id}...")
+    tokenizer = AutoTokenizer.from_pretrained(CFG.model_id)
     model = AutoModelForCausalLM.from_pretrained(
-        MODEL_ID, device_map="auto", torch_dtype=torch.bfloat16
+        CFG.model_id, device_map="auto", torch_dtype=torch.bfloat16
     )
     model.eval()
     device = next(model.parameters()).device

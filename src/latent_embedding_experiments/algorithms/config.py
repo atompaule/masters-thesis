@@ -2,18 +2,9 @@ from dataclasses import dataclass, field
 
 
 @dataclass
-class Config:
-    solver_steps: int = 300
+class SolverConfig:
+    steps: int = 300
     lr: float = 0.05
-
-    # Number of interlopers to consider in loss 3
-    num_interlopers: int = 10
-
-    # Top-p (nucleus) selection for determining k
-    temperature: float = 0.6
-    min_p: float = 0.03  # minimum probability threshold
-    min_k: int = 1  # always consider at least this many tokens
-    max_k: int = 10  # cap to avoid degenerate cases
 
     # Loss 1: Target ranking loss
     # Pure ordering — fires when any pair (i, j) with p_i > p_j has s_j > s_i
@@ -34,19 +25,34 @@ class Config:
     # Pulls the embedding toward all target tokens (unweighted)
     target_sim_weight: float = 1.0
 
-    approaches: list[str] = field(default_factory=lambda: [
-        "discrete_top1",
-        "discrete_cleaned",
-        "discrete_cleaned_dot_rescaled",
-        "soft_thinking",
-        # "soft_thinking_normalized",
-        "clean_soft",
-        "clean_soft_aggregate",
-        # "latent_head",
-        "solver",
-        # "centroid",
-        # "coconut",
-    ])
+
+@dataclass
+class Config:
+    model_id: str = "meta-llama/Llama-3.1-8B-Instruct"
+    approaches: list[str] = field(
+        default_factory=lambda: [
+            "discrete_top1",
+            "discrete_cleaned",
+            "discrete_cleaned_dot_rescaled",
+            "soft_thinking",
+            # "soft_thinking_normalized",
+            "clean_soft",
+            "clean_soft_aggregate",
+            # "latent_head",
+            "solver",
+            # "centroid",
+            # "coconut",
+        ]
+    )
+
+    temperature: float = 0.6
+    num_interlopers: int = 10
+
+    min_p: float = 0.03  # minimum probability threshold
+    min_k: int = 1  # always consider at least this many tokens
+    max_k: int = 10  # cap to avoid degenerate cases
+
+    solver_config: SolverConfig = field(default_factory=SolverConfig)
 
 
 CFG = Config()

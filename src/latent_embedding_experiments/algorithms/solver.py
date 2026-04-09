@@ -55,7 +55,7 @@ def geometric_solver(
         ).float()  # [k, k]
         n_pairs = pairwise_mask.sum().clamp(min=1)
 
-        target_probs_margins = CFG.margin_scale * (
+        target_probs_margins = CFG.solver_config.margin_scale * (
             target_probs[:-1] - target_probs[1:]
         )  # [k-1]
         n_adjacent = max(k - 1, 1)
@@ -79,9 +79,9 @@ def geometric_solver(
 
     latent_emb = torch.nn.Parameter(F.normalize(torch.randn(d, device=device), dim=0))
 
-    opt = optim.Adam([latent_emb], lr=CFG.lr)
+    opt = optim.Adam([latent_emb], lr=CFG.solver_config.lr)
 
-    for _ in range(CFG.solver_steps):
+    for _ in range(CFG.solver_config.steps):
         opt.zero_grad()
 
         latent_emb_q = F.normalize(latent_emb.unsqueeze(0), dim=1)  # [1, d]
@@ -98,29 +98,37 @@ def geometric_solver(
         )  # [k, k]
         ranking_violations = F.relu(-target_sims_diffs)
         loss_rank = (
-            CFG.ranking_weight * (pairwise_mask * ranking_violations).sum() / n_pairs
+            CFG.solver_config.ranking_weight
+            * (pairwise_mask * ranking_violations).sum()
+            / n_pairs
         )
 
         # Loss 2: Target margin loss (averaged over adjacent pairs)
         # L_margin = (1/(k-1)) * sum_i max(0, m_min + m_i - (s_i - s_{i+1}))
         target_sims_margins = target_sims[:-1] - target_sims[1:]  # [k-1]
         loss_margin = (
-            CFG.margin_weight
-            * F.relu(CFG.margin_min + target_probs_margins - target_sims_margins).sum()
+            CFG.solver_config.margin_weight
+            * F.relu(
+                CFG.solver_config.margin_min
+                + target_probs_margins
+                - target_sims_margins
+            ).sum()
             / n_adjacent
         )
 
         # Loss 3: Interloper similarity loss (averaged over interlopers)
         # L_interloper = (1/n_interlopers) * sum_l max(0, m_l + s_l - s_k)
         loss_interloper = (
-            CFG.interloper_weight
-            * F.relu(interloper_sims - CFG.interloper_margin_threshold).sum()
+            CFG.solver_config.interloper_weight
+            * F.relu(
+                interloper_sims - CFG.solver_config.interloper_margin_threshold
+            ).sum()
             / n_interlopers
         )
 
         # Loss 4: Target similarity loss (averaged over targets)
         # L_target = -(lambda_target / k) * sum_i s_i
-        loss_target = -CFG.target_sim_weight * target_sims.sum() / k
+        loss_target = -CFG.solver_config.target_sim_weight * target_sims.sum() / k
 
         # Total loss
         loss = loss_rank + loss_margin + loss_target + loss_interloper
@@ -224,11 +232,13 @@ def latent_head_loss(
     n_pairs = pairwise_mask.sum(dim=(-1, -2)).clamp(min=1)  # [B, L]
     loss_rank_per_pos = ranking_violations.sum(dim=(-1, -2)) / n_pairs  # [B, L]
     loss_rank = (
-        CFG.ranking_weight * (loss_rank_per_pos * pos_valid.float()).sum() / n_valid
+        CFG.solver_config.ranking_weight
+        * (loss_rank_per_pos * pos_valid.float()).sum()
+        / n_valid
     )
 
     # ── Loss 2: Margin ─────────────────────────────────────────────────────────
-    target_probs_margins = CFG.margin_scale * (
+    target_probs_margins = CFG.solver_config.margin_scale * (
         target_probs[..., :-1] - target_probs[..., 1:]
     )  # [B, L, k-1]
     sims_margins = target_sims[..., :-1] - target_sims[..., 1:]  # [B, L, k-1]
@@ -237,20 +247,26 @@ def latent_head_loss(
     adj_valid = valid_mask[..., :-1] & valid_mask[..., 1:]  # [B, L, k-1]
     n_adjacent = adj_valid.float().sum(dim=-1).clamp(min=1)  # [B, L]
 
-    margin_violations = F.relu(CFG.margin_min + target_probs_margins - sims_margins)
+    margin_violations = F.relu(
+        CFG.solver_config.margin_min + target_probs_margins - sims_margins
+    )
     margin_violations = margin_violations * adj_valid.float()
     loss_margin_per_pos = margin_violations.sum(dim=-1) / n_adjacent  # [B, L]
     loss_margin = (
-        CFG.margin_weight * (loss_margin_per_pos * pos_valid.float()).sum() / n_valid
+        CFG.solver_config.margin_weight
+        * (loss_margin_per_pos * pos_valid.float()).sum()
+        / n_valid
     )
 
     # ── Loss 3: Interloper ─────────────────────────────────────────────────────
-    interloper_violations = F.relu(interloper_sims - CFG.interloper_margin_threshold)
+    interloper_violations = F.relu(
+        interloper_sims - CFG.solver_config.interloper_margin_threshold
+    )
     loss_interloper_per_pos = (
         interloper_violations.sum(dim=-1) / n_interlopers
     )  # [B, L]
     loss_interloper = (
-        CFG.interloper_weight
+        CFG.solver_config.interloper_weight
         * (loss_interloper_per_pos * pos_valid.float()).sum()
         / n_valid
     )
@@ -259,7 +275,7 @@ def latent_head_loss(
     k_per_pos_clamped = k_per_pos.float().clamp(min=1)  # [B, L]
     loss_target_per_pos = -target_sims.sum(dim=-1) / k_per_pos_clamped  # [B, L]
     loss_target = (
-        CFG.target_sim_weight
+        CFG.solver_config.target_sim_weight
         * (loss_target_per_pos * pos_valid.float()).sum()
         / n_valid
     )
