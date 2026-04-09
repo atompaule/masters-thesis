@@ -33,9 +33,9 @@ DISPLAY_K_MIN = 20
 DISPLAY_K_DIST = 20
 
 N_INTERLOPERS = 10
-TARGET_SIM = 0.80
+TARGET_SIM = 0.93
 
-NEXT_STEP_EMBEDDING = "discrete_cleaned_dot_rescaled"
+NEXT_STEP_EMBEDDING = "discrete_cleaned"
 
 LOG_FILE = (
     "src/latent_embedding_experiments/logs/"
@@ -116,6 +116,7 @@ def run_latent_comparison_sequence(
                 logits = outputs.logits[0, -1, :].to(torch.float32)
                 greedy_id = int(logits.argmax(dim=-1).item())
                 greedy_continuation_ids.append(greedy_id)
+                top1_magnitude = vocab_embs[greedy_id].norm(p=2)
 
                 # --- Full distribution for display ---
                 full_probs = F.softmax(logits, dim=-1)
@@ -208,7 +209,7 @@ def run_latent_comparison_sequence(
                         top1_id=greedy_id,
                         vocab_embs=vocab_embs,
                         vocab_embs_norm=vocab_embs_norm,
-                        target_magnitude=target_magnitude,
+                        target_magnitude=top1_magnitude,
                         n_interlopers=n_interlopers,
                         target_sim=target_sim,
                     )
@@ -221,7 +222,7 @@ def run_latent_comparison_sequence(
                         top1_id=greedy_id,
                         vocab_embs=vocab_embs,
                         vocab_embs_norm=vocab_embs_norm,
-                        target_magnitude=target_magnitude,
+                        target_magnitude=top1_magnitude, # won't matter
                         n_interlopers=n_interlopers,
                         target_sim=target_sim,
                     )

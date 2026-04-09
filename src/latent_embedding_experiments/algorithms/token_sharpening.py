@@ -23,6 +23,11 @@ def clean_subspace_proj_slerp(
     where phi = arccos(e_tilde · e_hat) is the angle between the two endpoints.
     """
     A = interlopers.T
+    # Compute the QR decomposition of matrix A
+    # A = QR
+    # Q will consist of col vectors that are all orthogonal to each other, computed one after the other
+    # q_i = v_i * sum_{i=1}^{n-1} \frac{v_n^T * q_i}{|q_i|^2} * q_i
+    # Q builds a basis in the same vector room that the vectors in A span
     Q, _ = torch.linalg.qr(A)
     projection = Q @ (Q.T @ e)
     e_tilde = e - projection  # raw residual [d]
