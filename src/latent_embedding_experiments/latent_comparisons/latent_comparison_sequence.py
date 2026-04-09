@@ -24,7 +24,7 @@ from src.latent_embedding_experiments.algorithms.soft_thinking_sharpened import 
     soft_thinking_sharpened_per_token,
 )
 from src.latent_embedding_experiments.algorithms.solver import geometric_solver
-from src.latent_embedding_experiments.algorithms.utils import select_targets
+from src.latent_embedding_experiments.algorithms.utils import emit, select_targets
 
 # --- CONFIGURATION ---
 PROMPT = "The fundamental difference between humans and artificial intelligence is"
@@ -43,16 +43,6 @@ LOG_FILE = (
 )
 
 LATENT_HEAD_CHECKPOINT = "/work/utsch/masters-thesis/latent_embedding_experiments/latent_head/latent_head_mlp_2h.pt"
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def emit(text, file_handle=None):
-    print(text)
-    if file_handle:
-        file_handle.write(text + "\n")
 
 
 # ---------------------------------------------------------------------------
@@ -342,7 +332,10 @@ def run_latent_comparison_sequence(
                 approach_display = {
                     "discrete_top1": ("Discrete", v_discrete),
                     "discrete_cleaned": ("DiscCleaned", v_discrete_cleaned),
-                    "discrete_cleaned_dot_rescaled": ("DiscCleanedDR", v_discrete_cleaned_dr),
+                    "discrete_cleaned_dot_rescaled": (
+                        "DiscCleanedDR",
+                        v_discrete_cleaned_dr,
+                    ),
                     "soft_thinking": ("Soft", v_soft),
                     "soft_thinking_normalized": ("SoftNorm", v_soft_normalized),
                     "clean_soft": ("CleanSoft", v_clean_soft),

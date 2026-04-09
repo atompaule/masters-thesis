@@ -7,10 +7,14 @@ from huggingface_hub import hf_hub_download
 from safetensors.torch import load_file
 from transformers import AutoTokenizer
 
+from src.latent_embedding_experiments.algorithms.utils import emit
+
 # --- CONFIGURATION ---
 MODEL_ID = "meta-llama/Llama-3.1-405B-Instruct"
 DISPLAY_K = 15
-LOG_FILE = "src/latent_embedding_experiments/logs/llama_405b_vector_arithmetic_analysis.txt"
+LOG_FILE = (
+    "src/latent_embedding_experiments/logs/llama_405b_vector_arithmetic_analysis.txt"
+)
 
 # Define the equations you want to test: (Positive Concepts) - (Negative Concepts)
 # Example 1: King - Man + Woman = Queen
@@ -28,12 +32,6 @@ EQUATIONS = [
         "subtract": [" water"],
     },
 ]
-
-
-def emit(text, file_handle=None):
-    print(text)
-    if file_handle:
-        file_handle.write(text + "\n")
 
 
 def load_embeddings(model_id):

@@ -9,6 +9,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from src.latent_embedding_experiments.algorithms.config import CFG
 from src.latent_embedding_experiments.algorithms.soft_thinking import soft_thinking
 from src.latent_embedding_experiments.algorithms.solver import geometric_solver
+from src.latent_embedding_experiments.algorithms.utils import emit
 
 # =========================================================
 # CONFIG
@@ -30,12 +31,6 @@ EXP_CFG = ExperimentConfig()
 # =========================================================
 # UTIL
 # =========================================================
-
-
-def emit(text, f=None):
-    print(text)
-    if f:
-        f.write(text + "\n")
 
 
 def clean_token(token: str, max_len=12):

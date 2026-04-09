@@ -50,3 +50,9 @@ def select_targets(
         target_logits[pad_mask] = float("-inf")
 
         return target_logits, target_ids, k_per_pos
+
+
+def emit(text, file_handle=None):
+    print(text)
+    if file_handle:
+        file_handle.write(text + "\n")

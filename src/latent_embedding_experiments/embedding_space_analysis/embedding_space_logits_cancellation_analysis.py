@@ -29,6 +29,8 @@ from huggingface_hub import hf_hub_download
 from safetensors.torch import load_file
 from transformers import AutoTokenizer
 
+from src.latent_embedding_experiments.algorithms.utils import emit
+
 
 @dataclass
 class Config:
@@ -46,11 +48,6 @@ class Config:
 
 
 CFG = Config()
-
-
-def emit(text: str, f) -> None:
-    print(text)
-    f.write(text + "\n")
 
 
 def load_embeddings(model_id: str, device: torch.device) -> dict[str, torch.Tensor]:
@@ -163,7 +160,9 @@ def main():
     width = hi / CFG.num_bins
 
     row_idx = 0
-    examples: list[tuple[int, torch.Tensor, torch.Tensor, torch.Tensor, float, float]] = []
+    examples: list[
+        tuple[int, torch.Tensor, torch.Tensor, torch.Tensor, float, float]
+    ] = []
 
     for row in ds:
         if CFG.max_rows is not None and row_idx >= CFG.max_rows:
@@ -181,7 +180,14 @@ def main():
 
             if len(examples) < CFG.example_matrices:
                 examples.append(
-                    (row_idx, cos.detach().cpu(), probs.cpu(), ids.cpu(), w_pair, soft_ausl)
+                    (
+                        row_idx,
+                        cos.detach().cpu(),
+                        probs.cpu(),
+                        ids.cpu(),
+                        w_pair,
+                        soft_ausl,
+                    )
                 )
 
         row_idx += 1
@@ -199,7 +205,9 @@ def main():
         e("=== Logits top-k Auslöschung (405B logits dataset) ===\n")
         e(f"Dataset: {CFG.dataset_id}")
         e(f"Embeddings: {CFG.model_id} (L2-normalized rows for cosines)")
-        e(f"top_k: {CFG.top_k}, rows scanned: {row_idx}, valid timesteps: {n_primary}\n")
+        e(
+            f"top_k: {CFG.top_k}, rows scanned: {row_idx}, valid timesteps: {n_primary}\n"
+        )
 
         e("Definitions:")
         e("  cos_ij = cosine(embed(token_i), embed(token_j)) on top-k candidates.")
