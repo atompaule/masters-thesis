@@ -142,4 +142,4 @@ wandb/
 
 *.code-workspace
 
-logs/*
+logs/
