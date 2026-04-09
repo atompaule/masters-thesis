@@ -53,31 +53,30 @@ LOG_FILE = (
 
 
 def extract_number(text: str):
-    """Extract the answer number from model output.
-
-    Priority:
-      1. First \\boxed{N} after 'answer:'
-      2. First number after 'answer:'
-      3. Last \\boxed{N} anywhere in text
-      4. Last number in full text
     """
-    answer_match = re.search(r"answer\s*:\s*(.*)", text, re.IGNORECASE | re.DOTALL)
+    Extract the answer number from model output.
+    We strip commas immediately to prevent our regexes from choking.
+    """
+    # Exorcise all commas before the regex hunt begins
+    text_clean = text.replace(",", "")
+    
+    answer_match = re.search(r"answer\s*:\s*(.*)", text_clean, re.IGNORECASE | re.DOTALL)
     if answer_match:
         answer_text = answer_match.group(1)
         boxed = re.search(r"\\boxed\{(-?\d+\.?\d*)\}", answer_text)
         if boxed:
             return boxed.group(1)
-        nums = re.findall(r"-?\d+\.?\d*", answer_text.replace(",", ""))
+        nums = re.findall(r"-?\d+\.?\d*", answer_text)
         if nums:
             return nums[0]
 
     # Fallback: last boxed anywhere
-    boxed_all = re.findall(r"\\boxed\{(-?\d+\.?\d*)\}", text)
+    boxed_all = re.findall(r"\\boxed\{(-?\d+\.?\d*)\}", text_clean)
     if boxed_all:
         return boxed_all[-1]
 
     # Final fallback: last number in full text
-    matches = re.findall(r"-?\d+\.?\d*", text.replace(",", ""))
+    matches = re.findall(r"-?\d+\.?\d*", text_clean)
     return matches[-1] if matches else None
 
 
@@ -151,7 +150,7 @@ def generate_with_approach(model, tokenizer, question, vocab_embs, vocab_embs_no
 
         # stop once the answer box is complete
         if re.search(
-            r"answer\s*:\s*\$\\boxed\{-?\d+\.?\d*\}", generated_text, re.IGNORECASE
+            r"answer\s*:\s*\$\\boxed\{[^}]+\}", generated_text, re.IGNORECASE
         ):
             break
 
