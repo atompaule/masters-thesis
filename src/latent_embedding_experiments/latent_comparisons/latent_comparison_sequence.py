@@ -44,9 +44,11 @@ DYLAR_ENTROPY_THRESHOLD = 0.1  # set None to disable dynamic switch
 
 NEXT_STEP_EMBEDDING = "soft_thinking"
 
+MODEL_NAME = CFG.model_id.split("/")[1]
+
 LOG_FILE = (
     "src/latent_embedding_experiments/logs/"
-    f"llama_8b_latent_comparison_sequence_{NEXT_STEP_EMBEDDING}_{TARGET_SIM}.txt"
+    f"{MODEL_NAME}_latent_comparison_sequence_{NEXT_STEP_EMBEDDING}_{TARGET_SIM}.txt"
 )
 
 LATENT_HEAD_CHECKPOINT = "/work/utsch/masters-thesis/latent_embedding_experiments/latent_head/latent_head_mlp_2h.pt"
@@ -63,6 +65,10 @@ def run_latent_comparison_sequence(
     n_interlopers: int,
     target_sim: float,
 ) -> None:
+    approaches = set(CFG.approaches)
+    def need(key: str) -> bool:
+        return key in approaches or key == next_step_embedding
+
     print(f"Loading model: {CFG.model_id}...")
     tokenizer = AutoTokenizer.from_pretrained(CFG.model_id)
     model = AutoModelForCausalLM.from_pretrained(
@@ -82,7 +88,8 @@ def run_latent_comparison_sequence(
 
     # --- LatentHead ---
     hidden_dim = model.config.hidden_size
-    latent_head = load_latent_head(latent_head_checkpoint, hidden_dim, device)
+    if need("latent_head"):
+        latent_head = load_latent_head(latent_head_checkpoint, hidden_dim, device)
 
     pd.set_option("display.float_format", "{:.4f}".format)
     pd.set_option("display.width", 1000)
@@ -199,15 +206,9 @@ def run_latent_comparison_sequence(
                     outputs.hidden_states[-1][0, -1, :].unsqueeze(0).to(torch.float32)
                 )
 
-                # --- Vector synthesis (only compute what CFG.approaches requests) ---
-                approaches = set(CFG.approaches)
-
                 # Always compute discrete top-1 — needed as the greedy next step
                 # and as the cosine similarity reference for the summary table
                 v_discrete = pool_embs[0:1]
-
-                def need(key: str) -> bool:
-                    return key in approaches or key == next_step_embedding
 
                 v_discrete_cleaned = (
                     discrete_sharpened(
