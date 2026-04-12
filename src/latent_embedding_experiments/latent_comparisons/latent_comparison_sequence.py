@@ -14,6 +14,7 @@ from src.latent_embedding_experiments.algorithms.discrete_sharpened import (
     discrete_sharpened,
     discrete_sharpened_dot_rescaled,
 )
+from src.latent_embedding_experiments.algorithms.dylar import dylar
 from src.latent_embedding_experiments.algorithms.latent_head import load_latent_head
 from src.latent_embedding_experiments.algorithms.soft_thinking import (
     soft_thinking,
@@ -35,7 +36,10 @@ DISPLAY_K_DIST = 20
 N_INTERLOPERS = 10
 TARGET_SIM = 0.93
 
-NEXT_STEP_EMBEDDING = "discrete_cleaned"
+DYLAR_K = 2
+DYLAR_ENTROPY_THRESHOLD = 0.1  # set None to disable dynamic switch
+
+NEXT_STEP_EMBEDDING = "soft_thinking"
 
 LOG_FILE = (
     "src/latent_embedding_experiments/logs/"
@@ -244,6 +248,44 @@ def run_latent_comparison_sequence(
                     else None
                 )
 
+                if need("dylar") or need("dylar_dynamic"):
+                    last_hidden_f32 = last_hidden.squeeze(0)  # [d], float32
+                    v_dylar = dylar(
+                        logits=logits,
+                        hidden=last_hidden_f32,
+                        vocab_embs=vocab_embs,
+                        K=DYLAR_K,
+                        entropy_threshold=None,  # always compute for logging
+                    )
+                    # magnitude-normalise to match other approaches
+                    dylar_norm = v_dylar.norm(p=2, dim=1, keepdim=True).clamp_min(1e-8)
+                    v_dylar = (target_magnitude * v_dylar) / dylar_norm
+
+                    # dynamic variant: falls back to discrete when entropy < threshold
+                    if need("dylar_dynamic"):
+                        v_dylar_dynamic = dylar(
+                            logits=logits,
+                            hidden=last_hidden_f32,
+                            vocab_embs=vocab_embs,
+                            K=DYLAR_K,
+                            entropy_threshold=DYLAR_ENTROPY_THRESHOLD,
+                        )
+                        if v_dylar_dynamic is None:
+                            # dynamic switch chose explicit decoding — use discrete top-1
+                            v_dylar_dynamic = v_discrete.clone()
+                        else:
+                            dd_norm = v_dylar_dynamic.norm(
+                                p=2, dim=1, keepdim=True
+                            ).clamp_min(1e-8)
+                            v_dylar_dynamic = (
+                                target_magnitude * v_dylar_dynamic
+                            ) / dd_norm
+                    else:
+                        v_dylar_dynamic = None
+                else:
+                    v_dylar = None
+                    v_dylar_dynamic = None
+
                 v_clean_soft = (
                     soft_thinking_sharpened_per_token(
                         vocab_embs=vocab_embs,
@@ -308,6 +350,8 @@ def run_latent_comparison_sequence(
                     "discrete_cleaned_dot_rescaled": v_discrete_cleaned_dr,
                     "soft_thinking": v_soft,
                     "soft_thinking_normalized": v_soft_normalized,
+                    "dylar": v_dylar,
+                    "dylar_dynamic": v_dylar_dynamic,
                     "clean_soft": v_clean_soft,
                     "clean_soft_aggregate": v_clean_soft_agg,
                     "latent_head": v_latent_head,
@@ -339,6 +383,8 @@ def run_latent_comparison_sequence(
                     ),
                     "soft_thinking": ("Soft", v_soft),
                     "soft_thinking_normalized": ("SoftNorm", v_soft_normalized),
+                    "dylar": ("DyLaR", v_dylar),
+                    "dylar_dynamic": ("DyLaRDyn", v_dylar_dynamic),
                     "clean_soft": ("CleanSoft", v_clean_soft),
                     "clean_soft_aggregate": ("CleanSoftAgg", v_clean_soft_agg),
                     "latent_head": ("LatentHead", v_latent_head),

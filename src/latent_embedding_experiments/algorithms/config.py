@@ -37,6 +37,7 @@ class Config:
             "noisy_discrete",
             "soft_thinking",
             # "soft_thinking_normalized",
+            # "dylar",
             "clean_soft",
             "clean_soft_aggregate",
             # "latent_head",
