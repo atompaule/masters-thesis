@@ -27,6 +27,9 @@ from src.latent_embedding_experiments.algorithms.soft_thinking_sharpened import 
     soft_thinking_sharpened_per_token,
 )
 from src.latent_embedding_experiments.algorithms.solver import geometric_solver
+from src.latent_embedding_experiments.algorithms.token_sharpening import (
+    noisy_target_sim,
+)
 from src.latent_embedding_experiments.algorithms.utils import emit, select_targets
 
 # ---------------------------------------------------------------------------
@@ -35,14 +38,14 @@ from src.latent_embedding_experiments.algorithms.utils import emit, select_targe
 
 APPROACH = "soft_thinking"
 
-MAX_SAMPLES = 200
+MAX_SAMPLES = 1000
 MAX_NEW_TOKENS = 1024
 
 N_INTERLOPERS = 10
 
 # Sweep axes
-PASS_K_VALUES = [1, 8, 16]
-TARGET_SIM_VALUES = [1.0]
+PASS_K_VALUES = [1]
+TARGET_SIM_VALUES = [1]
 
 # Sampling config — TEMPERATURE = 0.0 means greedy (argmax)
 TEMPERATURE = 0.0
@@ -177,6 +180,40 @@ def generate_with_approach(
                 target_magnitude,
                 N_INTERLOPERS,
                 target_sim,
+            )
+
+        elif APPROACH == "noisy_discrete":
+            v_soft = soft_thinking(logits, vocab_embs)
+            v_soft_unit = F.normalize(v_soft, p=2, dim=1)  # [1, d]
+            all_cos_sims = (v_soft_unit @ vocab_embs_norm.T).squeeze(0)  # [V]
+            nearest_id = all_cos_sims.argmax().item()
+            soft_max_sim = all_cos_sims[nearest_id].clamp(-1.0, 1.0).item()
+            next_vec = noisy_target_sim(
+                vocab_embs[nearest_id],
+                target_sim=soft_max_sim,
+            ).unsqueeze(
+                0
+            )  # [1, d]
+
+            # --- Debug: similarity ranking of nearest token ---
+            nearest_token = tokenizer.decode([nearest_id]).replace("\n", "\\n")
+            greedy_token = tokenizer.decode([greedy_id]).replace("\n", "\\n")
+            greedy_sim = all_cos_sims[greedy_id].item()
+            # Rank of nearest_id in the soft thinking cosine sim ordering
+            nearest_rank = (
+                int((all_cos_sims > all_cos_sims[nearest_id]).sum().item()) + 1
+            )
+            greedy_rank = int((all_cos_sims > greedy_sim).sum().item()) + 1
+            diverged = nearest_id != greedy_id
+            (
+                print(
+                    f"[noisy_discrete debug] step | "
+                    f"greedy='{greedy_token}' (rank_greedy in ST: {greedy_rank}, sim_greedy in ST: {greedy_sim:.4f}) | "
+                    f"fed='{nearest_token}' (rank_fed in ST: {nearest_rank}, sim_fed in ST: {soft_max_sim:.4f}) | "
+                    f"{'DIVERGED' if diverged else 'same'}"
+                )
+                if diverged
+                else None
             )
 
         elif APPROACH == "soft_thinking":

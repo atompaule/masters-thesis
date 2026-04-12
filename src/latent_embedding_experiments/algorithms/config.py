@@ -34,6 +34,7 @@ class Config:
             "discrete_top1",
             "discrete_cleaned",
             "discrete_cleaned_dot_rescaled",
+            "noisy_discrete",
             "soft_thinking",
             # "soft_thinking_normalized",
             "clean_soft",
