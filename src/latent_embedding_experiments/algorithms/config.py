@@ -47,7 +47,7 @@ class Config:
         ]
     )
 
-    temperature: float = 0.6
+    temperature: float = 1.0
     num_interlopers: int = 10
 
     min_p: float = 0.03  # minimum probability threshold

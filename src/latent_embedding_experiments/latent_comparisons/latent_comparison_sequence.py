@@ -589,13 +589,13 @@ def run_latent_comparison_sequence(
         emit("AVERAGE COSINE SIMILARITY TO DISCRETE TOP-1 PER APPROACH", f)
         emit("=" * 140, f)
         col_w = 24
-        header = f"{'Approach':<{col_w}} | {'Mean':>8} | {'Min':>8} | {'Max':>8} | {'Std':>8}"
+        header = f"{'Approach':<{col_w}} | {'Mean':>8} | {'Median':>8} | {'Min':>8} | {'Max':>8} | {'Std':>8}"
         emit(header, f)
         emit("-" * len(header), f)
         for label, sims in discrete_sims_per_approach.items():
             t = torch.tensor(sims)
             emit(
-                f"{label:<{col_w}} | {t.mean().item():>8.4f} | "
+                f"{label:<{col_w}} | {t.mean().item():>8.4f} | {t.median().item():>8.4f} | "
                 f"{t.min().item():>8.4f} | {t.max().item():>8.4f} | "
                 f"{t.std().item():>8.4f}",
                 f,
