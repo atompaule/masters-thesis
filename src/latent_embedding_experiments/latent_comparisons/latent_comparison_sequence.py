@@ -25,6 +25,9 @@ from src.latent_embedding_experiments.algorithms.soft_thinking_sharpened import 
     soft_thinking_sharpened_per_token,
 )
 from src.latent_embedding_experiments.algorithms.solver import geometric_solver
+from src.latent_embedding_experiments.algorithms.token_sharpening import (
+    noisy_target_sim,
+)
 from src.latent_embedding_experiments.algorithms.utils import emit, select_targets
 
 # --- CONFIGURATION ---
@@ -240,6 +243,28 @@ def run_latent_comparison_sequence(
                     else None
                 )
 
+                # Noisy discrete baseline: discrete top-1 perturbed to match soft thinking's
+                # per-step cosine similarity to discrete. Geometry-blind control condition.
+                if need("noisy_discrete"):
+                    if v_soft is None:
+                        v_soft = soft_thinking(logits, vocab_embs)
+
+                    v_soft_unit = F.normalize(v_soft, p=2, dim=1)  # [1, d]
+                    # Find the vocab token soft thinking is most similar to
+                    all_cos_sims = (v_soft_unit @ vocab_embs_norm.T).squeeze(0)  # [V]
+                    nearest_id = all_cos_sims.argmax().item()
+                    soft_max_sim = all_cos_sims[nearest_id].clamp(-1.0, 1.0).item()
+
+                    # Use that token's embedding as the base (may differ from greedy top-1)
+                    v_noisy_discrete = noisy_target_sim(
+                        vocab_embs[nearest_id],
+                        target_sim=soft_max_sim,
+                    ).unsqueeze(
+                        0
+                    )  # [1, d]
+                else:
+                    v_noisy_discrete = None
+
                 v_soft_normalized = (
                     soft_thinking_normalized(logits, vocab_embs_norm, target_magnitude)
                     if need("soft_thinking_normalized") or need("clean_soft_aggregate")
@@ -346,6 +371,7 @@ def run_latent_comparison_sequence(
                     "discrete_top1": v_discrete,
                     "discrete_cleaned": v_discrete_cleaned,
                     "discrete_cleaned_dot_rescaled": v_discrete_cleaned_dr,
+                    "noisy_discrete": v_noisy_discrete,
                     "soft_thinking": v_soft,
                     "soft_thinking_normalized": v_soft_normalized,
                     "dylar": v_dylar,
@@ -397,6 +423,7 @@ def run_latent_comparison_sequence(
                         "DiscCleanedDR",
                         v_discrete_cleaned_dr,
                     ),
+                    "noisy_discrete": ("NoisyDisc", v_noisy_discrete),
                     "soft_thinking": ("Soft", v_soft),
                     "soft_thinking_normalized": ("SoftNorm", v_soft_normalized),
                     "dylar": ("DyLaR", v_dylar),
