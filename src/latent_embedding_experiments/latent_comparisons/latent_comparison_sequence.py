@@ -119,7 +119,7 @@ def run_latent_comparison_sequence(
                 outputs = model(inputs_embeds=inputs_embeds, output_hidden_states=True)
                 logits = outputs.logits[0, -1, :].to(torch.float32)
                 greedy_id = int(logits.argmax(dim=-1).item())
-                greedy_continuation_ids.append(greedy_id)
+                greedy_word = tokenizer.decode([greedy_id])
                 top1_magnitude = vocab_embs[greedy_id].norm(p=2)
 
                 # --- Full distribution for display ---
@@ -144,8 +144,6 @@ def run_latent_comparison_sequence(
                     step_target_info.append((clean, p_raw.item(), p_scaled.item()))
                 step_targets.append(step_target_info)
 
-                greedy_word = tokenizer.decode([greedy_id])
-                context_so_far += greedy_word
 
                 # --- Global ranks for display ---
                 sorted_idx = torch.argsort(logits, descending=True)
@@ -366,10 +364,28 @@ def run_latent_comparison_sequence(
                     [inputs_embeds, next_vec_bf16.unsqueeze(0)], dim=1
                 )
 
+                # Resolve the token actually fed forward for logging
+                if next_step_embedding in (
+                    "discrete_top1",
+                    "discrete_cleaned",
+                    "discrete_cleaned_dot_rescaled",
+                ):
+                    fed_id = greedy_id
+                else:
+                    next_vec_unit = F.normalize(next_vec, p=2, dim=1)
+                    fed_id = int(
+                        (next_vec_unit @ vocab_embs_norm.T).squeeze(0).argmax().item()
+                    )
+
+                fed_word = tokenizer.decode([fed_id])
+                greedy_continuation_ids.append(fed_id)  # was greedy_id
+                context_so_far += fed_word  # was greedy_word
+
+                clean_fed = fed_word.replace("\n", "\\n").replace("\r", "\\r")
                 clean_greedy = greedy_word.replace("\n", "\\n").replace("\r", "\\r")
                 emit(
                     f"--- NEXT INPUT: {next_step_embedding} | "
-                    f"greedy token: '{clean_greedy}' ---",
+                    f"greedy token: '{clean_greedy}' | fed token: '{clean_fed}' ---",
                     f,
                 )
 

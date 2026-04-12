@@ -142,8 +142,6 @@ def generate_with_approach(
 
     for _ in range(MAX_NEW_TOKENS):
         greedy_id = sample_token(logits, temperature)
-        token = tokenizer.decode([greedy_id])
-        generated_text += token
 
         if greedy_id == tokenizer.eos_token_id:
             break
@@ -253,6 +251,28 @@ def generate_with_approach(
 
         else:
             raise ValueError(f"Unknown APPROACH: {APPROACH}")
+
+        # --- Resolve the token actually fed forward ---
+        # For discrete approaches the fed token is exactly greedy_id.
+        # For all others, find the nearest vocab token to next_vec by cosine sim.
+        if APPROACH in (
+            "discrete_top1",
+            "discrete_cleaned",
+            "discrete_cleaned_dot_rescaled",
+        ):
+            fed_id = greedy_id
+        else:
+            next_vec_unit = F.normalize(next_vec, p=2, dim=1)  # [1, d]
+            fed_id = int((next_vec_unit @ vocab_embs_norm.T).squeeze(0).argmax().item())
+
+        token = tokenizer.decode([fed_id])
+        generated_text += token
+
+        if fed_id == tokenizer.eos_token_id:
+            break
+
+        if re.search(r"answer\s*:\s*\$\\boxed\{[^}]+\}", generated_text, re.IGNORECASE):
+            break
 
         next_vec = next_vec.to(device=device, dtype=model.dtype)
 
