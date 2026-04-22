@@ -68,7 +68,7 @@ def iter_timesteps(
     row: dict,
     tokenizer: AutoTokenizer,
     device: torch.device,
-    max_k: int,
+    top_k: int,
 ) -> list[tuple[torch.Tensor, torch.Tensor]]:
     if "token_ids" not in row or "top_values" not in row:
         return []
@@ -87,8 +87,8 @@ def iter_timesteps(
             tid = tid.flatten()
             log = log.flatten()
         mask = ~torch.isin(tid, special)
-        tid = tid[mask][:max_k]
-        log = log[mask][:max_k]
+        tid = tid[mask][:top_k]
+        log = log[mask][:top_k]
         if tid.numel() < 2:
             return
         probs = F.softmax(log, dim=-1)

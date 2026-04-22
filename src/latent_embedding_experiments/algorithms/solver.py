@@ -35,16 +35,13 @@ def geometric_solver(
 
     vocab_embs_norm = F.normalize(vocab_embs, dim=1)  # [V, d]
 
-    target_logits, target_ids = select_targets(logits)
+    target_probs, target_ids = select_targets(logits)
     k = len(target_ids)
 
     target_embs = vocab_embs[target_ids]
     target_embs_norm = F.normalize(target_embs, dim=1)  # [k, d]
 
-    target_probs_raw = F.softmax(target_logits, dim=-1)
-    target_magnitude = (target_probs_raw * target_embs.norm(dim=1)).sum().item()
-
-    target_probs = F.softmax(target_logits / CFG.temperature, dim=-1)  # [k]
+    target_magnitude = (target_probs * target_embs.norm(dim=1)).sum().item()
 
     vocab_embs_sim = vocab_embs_norm if use_cosine else vocab_embs
     target_embs_sim = target_embs_norm if use_cosine else target_embs
@@ -154,7 +151,7 @@ def latent_head_loss(
     B, L, _ = latent.shape
 
     # ── Target selection ───────────────────────────────────────────────────────
-    target_logits, target_ids, k_per_pos = select_targets(
+    target_probs, target_ids, k_per_pos = select_targets(
         logits
     )  # [B, L, k], [B, L, k], [B, L]
 
@@ -171,7 +168,6 @@ def latent_head_loss(
     target_embs_sim[pad_mask] = 0.0
 
     # ── Target probs (temperature-scaled, padded slots → 0 via -inf) ──────────
-    target_probs = F.softmax(target_logits / CFG.temperature, dim=-1)  # [B, L, k]
     target_probs = target_probs * valid_mask.float()  # zero out padding
 
     # ── Latent query ───────────────────────────────────────────────────────────

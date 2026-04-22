@@ -28,31 +28,27 @@ class SolverConfig:
 
 @dataclass
 class Config:
-    model_id: str = "meta-llama/Llama-3.1-8B-Instruct"
+    model_id: str = "meta-llama/Llama-3.2-3B-Instruct"
     approaches: list[str] = field(
         default_factory=lambda: [
             "discrete_top1",
-            "discrete_cleaned",
-            "discrete_cleaned_dot_rescaled",
+            # "discrete_cleaned",
+            # "discrete_cleaned_dot_rescaled",
             "noisy_discrete",
             "soft_thinking",
-            # "soft_thinking_normalized",
-            # "dylar",
-            "clean_soft",
-            "clean_soft_aggregate",
+            # "clean_soft",
+            # "clean_soft_aggregate",
             # "latent_head",
-            "solver",
+            # "solver",
             # "centroid",
             # "coconut",
         ]
     )
 
     temperature: float = 0.6
+    top_p: float = 0.97
+    top_k: int = 10  # not actually used in training or eval
     num_interlopers: int = 10
-
-    min_p: float = 0.03  # minimum probability threshold
-    min_k: int = 1  # always consider at least this many tokens
-    max_k: int = 10  # cap to avoid degenerate cases
 
     solver_config: SolverConfig = field(default_factory=SolverConfig)
 
