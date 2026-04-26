@@ -76,14 +76,12 @@ def build_prompt(sentence: str, option1: str, option2: str) -> str:
 
 
 def extract_choice(text: str) -> str | None:
-    """Extract '1' or '2' from generated text."""
-    # Prioritise explicit answer: N pattern
-    m = re.search(r"answer\s*[:\-]?\s*([12])\b", text, re.IGNORECASE)
-    if m:
-        return m.group(1)
-    # Fall back to last standalone 1 or 2 in text
-    matches = re.findall(r"\b([12])\b", text)
-    return matches[-1] if matches else None
+    # Require colon to avoid matching reasoning prose
+    matches = re.findall(r"answer\s*:\s*([12])\b", text, re.IGNORECASE)
+    if matches:
+        return matches[-1]  # take last in case model self-corrects
+
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -295,7 +293,7 @@ def main():
 
     model_slug = model_id.split("/")[-1].lower()
     log_file = (
-        f"latent_embedding_experiments/logs/"
+        f"src/latent_embedding_experiments/logs/"
         f"{model_slug}_eval_winogrande_exp4ii_p3_sweep.txt"
     )
     json_file = log_file.replace(".txt", ".json")

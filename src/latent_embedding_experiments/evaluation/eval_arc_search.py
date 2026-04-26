@@ -88,15 +88,11 @@ def build_prompt(question: str, choices: dict) -> str:
 
 
 def extract_letter(text: str) -> str | None:
-    """Extract the first A/B/C/D letter from generated text."""
-    # Look for explicit "Answer: X" or "answer: X" pattern first
-    m = re.search(r"answer\s*[:\-]?\s*([A-Ea-e])\b", text, re.IGNORECASE)
-    if m:
-        return m.group(1).upper()
-    # Fall back to first standalone letter
-    m = re.search(r"\b([A-Ea-e])\b", text)
-    if m:
-        return m.group(1).upper()
+    # Require a colon — avoids matching "answer C is incorrect"
+    matches = re.findall(r"answer\s*:\s*([A-Ea-e])\b", text, re.IGNORECASE)
+    if matches:
+        return matches[-1].upper()  # take the last one in case of retries
+
     return None
 
 
@@ -302,7 +298,7 @@ def main():
 
     model_slug = model_id.split("/")[-1].lower()
     log_file = (
-        f"latent_embedding_experiments/logs/"
+        f"src/latent_embedding_experiments/logs/"
         f"{model_slug}_eval_arc_exp4ii_p2_sweep.txt"
     )
     json_file = log_file.replace(".txt", ".json")
