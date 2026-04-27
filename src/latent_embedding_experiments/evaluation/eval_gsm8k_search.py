@@ -155,7 +155,14 @@ def generate_with_approach(
         f"Question: {question}\n"
         f"reasoning: "
     )
-    input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(device)
+    messages = [{"role": "user", "content": prompt}]
+    input_ids = tokenizer.apply_chat_template(
+        messages,
+        add_generation_prompt=True,
+        return_tensors="pt",
+        return_dict=False,
+        enable_thinking=False,
+    ).to(device)
     inputs_embeds = embed_layer(input_ids)
 
     with torch.no_grad():
@@ -312,7 +319,7 @@ def main():
 
     model_slug = model_id.split("/")[-1].lower()
     log_file = (
-        f"latent_embedding_experiments/logs/"
+        f"src/latent_embedding_experiments/logs/"
         f"{model_slug}_eval_gsm8k_exp4ii_p1_sweep.txt"
     )
     json_file = log_file.replace(".txt", ".json")

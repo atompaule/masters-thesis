@@ -28,7 +28,7 @@ class SolverConfig:
 
 @dataclass
 class Config:
-    model_id: str = "meta-llama/Llama-3.2-3B-Instruct"
+    model_id: str = "meta-llama/Llama-3.1-8B-Instruct"
     approaches: list[str] = field(
         default_factory=lambda: [
             "discrete_top1",

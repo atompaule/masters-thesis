@@ -144,7 +144,14 @@ def generate_with_approach(
     device = next(model.parameters()).device
     embed_layer = model.get_input_embeddings()
 
-    input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(device)
+    messages = [{"role": "user", "content": prompt}]
+    input_ids = tokenizer.apply_chat_template(
+        messages,
+        add_generation_prompt=True,
+        return_tensors="pt",
+        return_dict=False,
+        enable_thinking=False,
+    ).to(device)
     inputs_embeds = embed_layer(input_ids)
 
     with torch.no_grad():
