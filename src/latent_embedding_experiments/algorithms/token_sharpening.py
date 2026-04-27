@@ -101,3 +101,166 @@ def noisy_target_sim(
     result = torch.cos(theta) * ref_hat + torch.sin(theta) * noise
 
     return mag * F.normalize(result.unsqueeze(0), dim=1).squeeze(0)
+
+
+def bernoulli_dropout_noise(
+    e: torch.Tensor,
+    target_sim: float = 0.90,
+    reference: torch.Tensor | None = None,
+    keep_prob: float = 0.7,
+    tol: float = 1e-4,
+) -> torch.Tensor:
+    """Perturb a token embedding via Bernoulli dropout noise to achieve target_sim.
+
+    Instead of isotropic Gaussian noise, the perturbation direction is drawn
+    by randomly zeroing out dimensions of the reference vector and taking the
+    residual perpendicular component. This creates sparse, axis-aligned
+    perturbations — structurally different from isotropic noise.
+
+    The result is slerped to cosine similarity target_sim to the reference,
+    at the original magnitude of e.
+
+    Args:
+        e:           Input embedding [d], need not be unit norm.
+        target_sim:  Desired cosine similarity to the reference vector.
+        reference:   Reference vector [d]. Defaults to e itself.
+        keep_prob:   Probability of keeping each dimension (Bernoulli p).
+                     Lower = sparser perturbation direction.
+        tol:         Tolerance below which target_sim is treated as 1.0.
+
+    Returns:
+        Vector [d] with cosine similarity ~target_sim to reference, magnitude ||e||.
+    """
+    mag = e.norm(p=2).clamp_min(1e-8)
+    e_hat = e / mag
+
+    ref_hat = (
+        F.normalize(reference.unsqueeze(0), dim=1).squeeze(0)
+        if reference is not None
+        else e_hat
+    )
+
+    if target_sim >= 1.0 - tol:
+        return mag * ref_hat
+
+    # Bernoulli mask: randomly zero out dimensions, then project out ref_hat component
+    # to get a perpendicular noise direction. Retry if the mask produces a zero vector.
+    d = e.shape[0]
+    for _ in range(10):  # retries in case of degenerate mask
+        mask = torch.bernoulli(torch.full((d,), keep_prob, dtype=e.dtype))
+        noise = ref_hat * mask  # sparse version of ref_hat
+        noise = noise - (noise @ ref_hat) * ref_hat  # project out ref_hat component
+        noise_norm = noise.norm(p=2)
+        if noise_norm > 1e-6:
+            break
+    else:
+        # Fallback: isotropic Gaussian (degenerate mask — extremely rare in high-d)
+        noise = torch.randn_like(ref_hat)
+        noise = noise - (noise @ ref_hat) * ref_hat
+
+    noise = F.normalize(noise.unsqueeze(0), dim=1).squeeze(0)
+
+    theta = torch.arccos(torch.tensor(target_sim, dtype=e.dtype))
+    result = torch.cos(theta) * ref_hat + torch.sin(theta) * noise
+
+    return mag * F.normalize(result.unsqueeze(0), dim=1).squeeze(0)
+
+
+def top_pc_noise(
+    e: torch.Tensor,
+    embedding_matrix: torch.Tensor,
+    target_sim: float = 0.90,
+    reference: torch.Tensor | None = None,
+    n_components: int = 50,
+    use_top: bool = True,
+    tol: float = 1e-4,
+    _pc_cache: dict | None = None,
+) -> torch.Tensor:
+    """Perturb a token embedding with noise confined to the top (or bottom) PCs of E.
+
+    The perturbation direction is drawn uniformly from the subspace spanned by
+    the top-n_components principal components of the embedding matrix, then
+    projected to be perpendicular to the reference vector.
+
+    use_top=True  → noise in high-variance subspace (semantically loaded axes).
+    use_top=False → noise in the complementary low-variance subspace (background).
+
+    Comparing isotropic / top-PC / bottom-PC noise isolates whether perturbation
+    direction relative to the embedding space's PCA structure matters.
+
+    Args:
+        e:                 Input embedding [d], need not be unit norm.
+        embedding_matrix:  Full token embedding matrix [V, d], used for PCA.
+        target_sim:        Desired cosine similarity to the reference vector.
+        reference:         Reference vector [d]. Defaults to e itself.
+        n_components:      Number of PCs to use (or exclude if use_top=False).
+        use_top:           If True, noise ∈ span(top PCs). If False, noise ∈ complement.
+        tol:               Tolerance below which target_sim is treated as 1.0.
+        _pc_cache:         Optional dict for caching SVD results across calls.
+                           Pass the same dict repeatedly to avoid recomputing.
+                           Key used: ('top_pcs', n_components).
+
+    Returns:
+        Vector [d] with cosine similarity ~target_sim to reference, magnitude ||e||.
+
+    Note on PCA cost:
+        SVD on a large embedding matrix (e.g. [128k, 4096]) is expensive.
+        Use _pc_cache to amortize across many calls:
+
+            cache = {}
+            for e in embeddings:
+                result = top_pc_noise(e, E, _pc_cache=cache)
+    """
+    mag = e.norm(p=2).clamp_min(1e-8)
+    e_hat = e / mag
+
+    ref_hat = (
+        F.normalize(reference.unsqueeze(0), dim=1).squeeze(0)
+        if reference is not None
+        else e_hat
+    )
+
+    if target_sim >= 1.0 - tol:
+        return mag * ref_hat
+
+    # --- PCA: compute or retrieve top principal components ---
+    cache_key = ('top_pcs', n_components)
+    if _pc_cache is not None and cache_key in _pc_cache:
+        top_pcs = _pc_cache[cache_key]  # [n_components, d]
+    else:
+        E = embedding_matrix.float()
+        E_centered = E - E.mean(dim=0, keepdim=True)
+        # Thin SVD: we only need the right singular vectors (principal components)
+        # Using torch.linalg.svd with full_matrices=False for efficiency
+        _, _, Vt = torch.linalg.svd(E_centered, full_matrices=False)
+        top_pcs = Vt[:n_components]  # [n_components, d], rows are PC directions
+        if _pc_cache is not None:
+            _pc_cache[cache_key] = top_pcs
+
+    # --- Draw noise direction from the chosen subspace ---
+    if use_top:
+        # Random linear combination of top PCs (uniform on their span)
+        coeffs = torch.randn(n_components, dtype=e.dtype)
+        noise = (coeffs.unsqueeze(1) * top_pcs.to(e.dtype)).sum(dim=0)  # [d]
+    else:
+        # Random isotropic vector, then project OUT the top-PC subspace
+        # Leaves only the complement (bottom PCs / residual) subspace
+        noise = torch.randn_like(ref_hat)
+        proj_onto_top = top_pcs.to(e.dtype)  # [n_components, d]
+        # Subtract projections onto each top PC
+        coords = proj_onto_top @ noise  # [n_components]
+        noise = noise - (proj_onto_top.T @ coords)  # [d]
+
+    # Project out the ref_hat component so noise ⊥ ref_hat
+    noise = noise - (noise @ ref_hat) * ref_hat
+    noise_norm = noise.norm(p=2)
+    if noise_norm < 1e-6:
+        # Degenerate: ref_hat is already in the chosen subspace; resample isotropically
+        noise = torch.randn_like(ref_hat)
+        noise = noise - (noise @ ref_hat) * ref_hat
+    noise = F.normalize(noise.unsqueeze(0), dim=1).squeeze(0)
+
+    theta = torch.arccos(torch.tensor(target_sim, dtype=e.dtype))
+    result = torch.cos(theta) * ref_hat + torch.sin(theta) * noise
+
+    return mag * F.normalize(result.unsqueeze(0), dim=1).squeeze(0)
