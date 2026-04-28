@@ -249,6 +249,13 @@ experiments = [
         "suffix": "\n\nDescription: ",
     },
     {
+        "name": "Mountain",
+        "words": [" mountain"],
+        "logits": [16.0],
+        "prefix": "Instruction: Vividly describe the concept represented here.\n\nConcept: ",
+        "suffix": "\n\nDescription: ",
+    },
+    {
         "name": "City on top — excitement, inspiration, and related uplift",
         "words": [" city", " excitement", " inspiration", " bright", " hope"],
         "logits": [16.0, 15.5, 15.0, 14.5, 14.0],
