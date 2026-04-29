@@ -127,96 +127,129 @@ def sample_token(
 # Generation
 # ---------------------------------------------------------------------------
 
+BATCH_SIZE = 16
 
-def generate_with_approach(
+
+def generate_batch(
     model,
     tokenizer,
-    prompt: str,
+    prompts: list[str],
     vocab_embs: torch.Tensor,
     vocab_embs_norm: torch.Tensor,
     config: dict,
-) -> str:
-    """Autoregressive generation for one approach config."""
+) -> list[str]:
+    """Batched autoregressive generation with custom embedding logic."""
     approach = config["name"]
     sampling_temp = config["sampling_temp"]
     top_p = config.get("top_p", 1.0)
 
     device = next(model.parameters()).device
     embed_layer = model.get_input_embeddings()
+    B = len(prompts)
 
-    messages = [{"role": "user", "content": prompt}]
-    input_ids = tokenizer.apply_chat_template(
-        messages,
-        add_generation_prompt=True,
-        return_tensors="pt",
-        return_dict=False,
-        enable_thinking=False,
-    ).to(device)
-    inputs_embeds = embed_layer(input_ids)
+    # Build chat-formatted strings for each prompt
+    formatted = [
+        tokenizer.apply_chat_template(
+            [{"role": "user", "content": p}],
+            add_generation_prompt=True,
+            tokenize=False,  # get string, not token ids
+            enable_thinking=False,
+        )
+        for p in prompts
+    ]
+
+    # Now tokenize with padding
+    tokenizer.padding_side = "left"
+    tokenizer.pad_token = tokenizer.eos_token
+    enc = tokenizer(formatted, return_tensors="pt", padding=True).to(device)
+
+    input_ids = enc["input_ids"]  # [B, L]
+    attention_mask = enc["attention_mask"]  # [B, L]
+
+    inputs_embeds = embed_layer(input_ids)  # [B, L, d]
 
     with torch.no_grad():
-        outputs = model(inputs_embeds=inputs_embeds, use_cache=True)
+        outputs = model(
+            inputs_embeds=inputs_embeds,
+            attention_mask=attention_mask,
+            use_cache=True,
+        )
     past_key_values = outputs.past_key_values
-    logits = outputs.logits[0, -1].float()
+    logits = outputs.logits[:, -1, :].float()  # [B, V]
 
-    generated_text = ""
+    generated = [""] * B
+    finished = torch.zeros(B, dtype=torch.bool, device=device)
 
     for _ in range(MAX_NEW_TOKENS):
-        greedy_id = sample_token(logits, sampling_temp, top_p)
-
-        if greedy_id == tokenizer.eos_token_id:
-            break
-        if re.search(r"answer\s*:\s*[A-Ea-e]\b", generated_text, re.IGNORECASE):
+        if finished.all():
             break
 
-        # ---- Build next embedding ----------------------------------------
+        next_vecs = []  # will be [B, d]
+        fed_ids = []
 
-        if approach in ("discrete_top1", "default_baseline"):
-            next_vec = vocab_embs[greedy_id].unsqueeze(0)
-            fed_id = greedy_id
+        for b in range(B):
+            if finished[b]:
+                # Feed a dummy pad embedding — doesn't matter, output ignored
+                next_vecs.append(vocab_embs[tokenizer.eos_token_id])
+                fed_ids.append(tokenizer.eos_token_id)
+                continue
 
-        elif approach == "soft_thinking":
-            next_vec = soft_thinking(logits, vocab_embs)
-            next_vec_unit = F.normalize(next_vec, p=2, dim=1)
-            fed_id = int((next_vec_unit @ vocab_embs_norm.T).squeeze(0).argmax().item())
+            b_logits = logits[b]  # [V]
+            greedy_id = sample_token(b_logits, sampling_temp, top_p)
 
-        elif approach == "noisy_discrete":
-            v_soft = soft_thinking(logits, vocab_embs)
-            v_soft_unit = F.normalize(v_soft, p=2, dim=1)
-            all_cos_sims = (v_soft_unit @ vocab_embs_norm.T).squeeze(0)
-            nearest_id = int(all_cos_sims.argmax().item())
-            soft_max_sim = all_cos_sims[nearest_id].clamp(-1.0, 1.0).item()
-            next_vec = noisy_target_sim(
-                vocab_embs[nearest_id],
-                target_sim=soft_max_sim,
-            ).unsqueeze(0)
-            next_vec_unit = F.normalize(next_vec, p=2, dim=1)
-            fed_id = int((next_vec_unit @ vocab_embs_norm.T).squeeze(0).argmax().item())
+            if approach in ("discrete_top1", "default_baseline"):
+                next_vec = vocab_embs[greedy_id]
+                fed_id = greedy_id
 
-        else:
-            raise ValueError(f"Unknown approach: {approach!r}")
+            elif approach == "soft_thinking":
+                next_vec = soft_thinking(b_logits, vocab_embs).squeeze(0)
+                next_vec_unit = F.normalize(next_vec.unsqueeze(0), p=2, dim=1)
+                fed_id = int(
+                    (next_vec_unit @ vocab_embs_norm.T).squeeze(0).argmax().item()
+                )
 
-        token = tokenizer.decode([fed_id])
-        generated_text += token
+            elif approach == "noisy_discrete":
+                v_soft = soft_thinking(b_logits, vocab_embs)
+                v_soft_unit = F.normalize(v_soft, p=2, dim=1)
+                all_cos_sims = (v_soft_unit @ vocab_embs_norm.T).squeeze(0)
+                nearest_id = int(all_cos_sims.argmax().item())
+                soft_max_sim = all_cos_sims[nearest_id].clamp(-1.0, 1.0).item()
+                next_vec = noisy_target_sim(
+                    vocab_embs[nearest_id], target_sim=soft_max_sim
+                )
+                next_vec_unit = F.normalize(next_vec.unsqueeze(0), p=2, dim=1)
+                fed_id = int(
+                    (next_vec_unit @ vocab_embs_norm.T).squeeze(0).argmax().item()
+                )
 
-        if fed_id == tokenizer.eos_token_id:
-            break
-        if re.search(r"answer\s*:\s*[A-Ea-e]\b", generated_text, re.IGNORECASE):
-            break
+            else:
+                raise ValueError(f"Unknown approach: {approach!r}")
 
-        next_vec = next_vec.to(device=device, dtype=model.dtype)
+            token = tokenizer.decode([fed_id])
+            generated[b] += token
+
+            if fed_id == tokenizer.eos_token_id or re.search(
+                r"answer\s*:\s*[A-Ea-e]\b", generated[b], re.IGNORECASE
+            ):
+                finished[b] = True
+
+            next_vecs.append(next_vec)
+            fed_ids.append(fed_id)
+
+        # Stack and feed back: [B, 1, d]
+        next_embeds = torch.stack(next_vecs, dim=0).to(device=device, dtype=model.dtype)
+        next_embeds = next_embeds.unsqueeze(1)
 
         with torch.no_grad():
             outputs = model(
-                inputs_embeds=next_vec.unsqueeze(0),  # [1, 1, d]
+                inputs_embeds=next_embeds,
                 past_key_values=past_key_values,
                 use_cache=True,
             )
-
         past_key_values = outputs.past_key_values
-        logits = outputs.logits[0, -1].float()
+        logits = outputs.logits[:, -1, :].float()  # [B, V]
 
-    return generated_text
+    return generated
 
 
 # ---------------------------------------------------------------------------
@@ -224,60 +257,51 @@ def generate_with_approach(
 # ---------------------------------------------------------------------------
 
 
-def evaluate_config(
-    model,
-    tokenizer,
-    dataset,
-    vocab_embs: torch.Tensor,
-    vocab_embs_norm: torch.Tensor,
-    config: dict,
-    f,
-) -> dict:
-    """Run pass@1 evaluation for one config. Returns a results dict."""
+def evaluate_config(model, tokenizer, dataset, vocab_embs, vocab_embs_norm, config, f):
     emit(f"\n{'#'*70}", f)
     emit(f"CONFIG: {config}", f)
     emit(f"{'#'*70}", f)
 
-    correct = 0
-    total = 0
-    results: list[dict] = []
+    correct, total = 0, 0
+    results = []
+    samples = list(dataset)[:MAX_SAMPLES]
 
-    for i, sample in enumerate(dataset):
-        if i >= MAX_SAMPLES:
-            break
+    for batch_start in range(0, len(samples), BATCH_SIZE):
+        batch = samples[batch_start : batch_start + BATCH_SIZE]
 
-        question = sample["question"]
-        choices = sample["choices"]
-        gt_key = normalize_answer_key(sample["answerKey"])
-        prompt = build_prompt(question, choices)
+        prompts = [build_prompt(s["question"], s["choices"]) for s in batch]
+        gt_keys = [normalize_answer_key(s["answerKey"]) for s in batch]
 
-        emit(f"\n{'='*60}", f)
-        emit(f"[{i+1}] Q: {question}", f)
-        emit(f"GT: {gt_key}", f)
-
-        pred_text = generate_with_approach(
-            model,
-            tokenizer,
-            prompt,
-            vocab_embs,
-            vocab_embs_norm,
-            config,
-        )
-        pred_key = extract_letter(pred_text)
-        is_correct = pred_key is not None and pred_key == gt_key
-
-        correct += int(is_correct)
-        total += 1
-        results.append(
-            {"index": i + 1, "gt": gt_key, "pred": pred_key, "correct": is_correct}
+        pred_texts = generate_batch(
+            model, tokenizer, prompts, vocab_embs, vocab_embs_norm, config
         )
 
-        emit(pred_text, f)
-        emit(f"Pred: {pred_key} | {'✅' if is_correct else '❌'}", f)
+        for i, (sample, gt_key, pred_text) in enumerate(
+            zip(batch, gt_keys, pred_texts)
+        ):
+            global_i = batch_start + i
+            pred_key = extract_letter(pred_text)
+            is_correct = pred_key is not None and pred_key == gt_key
+            correct += int(is_correct)
+            total += 1
+
+            emit(f"\n{'='*60}", f)
+            emit(f"[{global_i+1}] Q: {sample['question']}", f)
+            emit(f"GT: {gt_key}", f)
+            emit(pred_text, f)
+            emit(f"Pred: {pred_key} | {'✅' if is_correct else '❌'}", f)
+
+            results.append(
+                {
+                    "index": global_i + 1,
+                    "gt": gt_key,
+                    "pred": pred_key,
+                    "correct": is_correct,
+                }
+            )
 
     acc = correct / total
     emit(f"\napproach={config['name']} → {acc:.4f} ({correct}/{total})", f)
-
     return {
         "config": config,
         "accuracy": acc,
