@@ -42,6 +42,9 @@ class Config:
             # "solver",
             # "centroid",
             # "coconut",
+            "noisy_discrete_bernoulli",
+            "noisy_discrete_pc_random",
+            "noisy_discrete_pc_deterministic",
         ]
     )
 

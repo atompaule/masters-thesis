@@ -22,7 +22,10 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from src.latent_embedding_experiments.algorithms.config import CFG
 from src.latent_embedding_experiments.algorithms.soft_thinking import soft_thinking
 from src.latent_embedding_experiments.algorithms.token_sharpening import (
+    noisy_discrete_bernoulli,
+    noisy_discrete_pc_deterministic,
     noisy_target_sim,
+    noisy_discrete_pc_random,
 )
 from src.latent_embedding_experiments.algorithms.utils import emit
 
@@ -31,34 +34,53 @@ from src.latent_embedding_experiments.algorithms.utils import emit
 # ---------------------------------------------------------------------------
 
 MAX_SAMPLES = 10000
-MAX_NEW_TOKENS = 1024
+MAX_NEW_TOKENS = 512
 
 APPROACH_CONFIGS = [
+    # {
+    #     "name": "soft_thinking",
+    #     "sampling_temp": 0.0,
+    #     "top_p": 0.95,
+    # },
+    # {
+    #     "name": "noisy_discrete",
+    #     "sampling_temp": 0.0,
+    #     "top_p": 0.95,
+    # },
     {
-        "name": "soft_thinking",
+        "name": "noisy_discrete_bernoulli",
         "sampling_temp": 0.0,
         "top_p": 0.95,
     },
+    # {
+    #     "name": "noisy_discrete_pc_random",
+    #     "sampling_temp": 0.0,
+    #     "top_p": 0.95,
+    # },
     {
-        "name": "noisy_discrete",
-        "noise_variant": "gaussian",
+        "name": "noisy_discrete_pc_deterministic",
         "sampling_temp": 0.0,
         "top_p": 0.95,
     },
-    {
-        "name": "discrete_top1",
-        "sampling_temp": 0.0,
-        "top_p": 0.95,
-    },
-    {
-        "name": "default_baseline",
-        "sampling_temp": 0.6,
-        "top_p": 0.90,
-    },
+    # {
+    #     "name": "discrete_top1",
+    #     "sampling_temp": 0.0,
+    #     "top_p": 0.95,
+    # },
+    # {
+    #     "name": "default_baseline",
+    #     "sampling_temp": 0.6,
+    #     "top_p": 0.90,
+    # },
 ]
 
-DEVICE = "cuda"
-BATCH_SIZE = 8
+DEVICE = torch.device(
+    "cuda"
+    if torch.cuda.is_available()
+    else "mps" if torch.backends.mps.is_available() else "cpu"
+)
+print(f"Using device: {DEVICE}")
+BATCH_SIZE = 1
 
 # ---------------------------------------------------------------------------
 # GSM8K-specific utils
@@ -150,6 +172,7 @@ def generate_batch(
     vocab_embs: torch.Tensor,
     vocab_embs_norm: torch.Tensor,
     config: dict,
+    pc_cache: dict | None = None,
 ) -> list[str]:
     """Batched autoregressive generation with custom embedding logic."""
     approach = config["name"]
@@ -235,6 +258,54 @@ def generate_batch(
                     (next_vec_unit @ vocab_embs_norm.T).squeeze(0).argmax().item()
                 )
 
+            elif approach == "noisy_discrete_bernoulli":
+                v_soft = soft_thinking(b_logits, vocab_embs)
+                v_soft_unit = F.normalize(v_soft, p=2, dim=1)
+                all_cos_sims = (v_soft_unit @ vocab_embs_norm.T).squeeze(0)
+                nearest_id = int(all_cos_sims.argmax().item())
+                soft_max_sim = all_cos_sims[nearest_id].clamp(-1.0, 1.0).item()
+                next_vec = noisy_discrete_bernoulli(
+                    vocab_embs[nearest_id], target_sim=soft_max_sim
+                )
+                next_vec_unit = F.normalize(next_vec.unsqueeze(0), p=2, dim=1)
+                fed_id = int(
+                    (next_vec_unit @ vocab_embs_norm.T).squeeze(0).argmax().item()
+                )
+
+            elif approach == "noisy_discrete_pc_random":
+                v_soft = soft_thinking(b_logits, vocab_embs)
+                v_soft_unit = F.normalize(v_soft, p=2, dim=1)
+                all_cos_sims = (v_soft_unit @ vocab_embs_norm.T).squeeze(0)
+                nearest_id = int(all_cos_sims.argmax().item())
+                soft_max_sim = all_cos_sims[nearest_id].clamp(-1.0, 1.0).item()
+                next_vec = noisy_discrete_pc_random(
+                    vocab_embs[nearest_id],
+                    embedding_matrix=vocab_embs,
+                    target_sim=soft_max_sim,
+                    _pc_cache=pc_cache,
+                )
+                next_vec_unit = F.normalize(next_vec.unsqueeze(0), p=2, dim=1)
+                fed_id = int(
+                    (next_vec_unit @ vocab_embs_norm.T).squeeze(0).argmax().item()
+                )
+
+            elif approach == "noisy_discrete_pc_deterministic":
+                v_soft = soft_thinking(b_logits, vocab_embs)
+                v_soft_unit = F.normalize(v_soft, p=2, dim=1)
+                all_cos_sims = (v_soft_unit @ vocab_embs_norm.T).squeeze(0)
+                nearest_id = int(all_cos_sims.argmax().item())
+                soft_max_sim = all_cos_sims[nearest_id].clamp(-1.0, 1.0).item()
+                next_vec = noisy_discrete_pc_deterministic(
+                    vocab_embs[nearest_id],
+                    embedding_matrix=vocab_embs,
+                    target_sim=soft_max_sim,
+                    _pc_cache=pc_cache,
+                )
+                next_vec_unit = F.normalize(next_vec.unsqueeze(0), p=2, dim=1)
+                fed_id = int(
+                    (next_vec_unit @ vocab_embs_norm.T).squeeze(0).argmax().item()
+                )
+
             else:
                 raise ValueError(f"Unknown approach: {approach!r}")
 
@@ -280,14 +351,15 @@ def evaluate_config(
     f,
 ) -> dict:
     """Run pass@1 evaluation for one config. Returns a results dict."""
-    emit(f"\n{'#'*70}", f)
+    emit(f"\n{'#' * 70}", f)
     emit(f"CONFIG: {config}", f)
-    emit(f"{'#'*70}", f)
+    emit(f"{'#' * 70}", f)
 
     correct, total = 0, 0
     results: list[dict] = []
     samples = list(dataset)[:MAX_SAMPLES]
     n_batches = (len(samples) + BATCH_SIZE - 1) // BATCH_SIZE
+    pc_cache: dict = {}
 
     for batch_idx, batch_start in enumerate(
         tqdm(range(0, len(samples), BATCH_SIZE), desc=config["name"])
@@ -299,13 +371,13 @@ def evaluate_config(
         gt_answers = [extract_number(s["answer"]) for s in batch]
 
         pred_texts = generate_batch(
-            model, tokenizer, prompts, vocab_embs, vocab_embs_norm, config
+            model, tokenizer, prompts, vocab_embs, vocab_embs_norm, config, pc_cache
         )
 
         elapsed = time.time() - t0
         emit(
-            f"[{config['name']}] batch {batch_idx+1}/{n_batches} "
-            f"| {elapsed:.1f}s | {elapsed/len(batch):.2f}s/sample",
+            f"[{config['name']}] batch {batch_idx + 1}/{n_batches} "
+            f"| {elapsed:.1f}s | {elapsed / len(batch):.2f}s/sample",
             f,
         )
 
@@ -323,8 +395,8 @@ def evaluate_config(
             correct += int(is_correct)
             total += 1
 
-            emit(f"\n{'='*60}", f)
-            emit(f"[{global_i+1}] Q: {sample['question']}", f)
+            emit(f"\n{'=' * 60}", f)
+            emit(f"[{global_i + 1}] Q: {sample['question']}", f)
             emit(f"GT: {gt_answer}", f)
             emit(pred_text, f)
             emit(f"Pred: {pred_answer} | {'✅' if is_correct else '❌'}", f)
@@ -369,7 +441,7 @@ def main():
     model_slug = model_id.split("/")[-1].lower()
     log_file = (
         f"src/latent_embedding_experiments/logs/"
-        f"{model_slug}_eval_gsm8k_exp4ii_p1_sweep.txt"
+        f"{model_slug}_eval_gsm8k_exp4ii_noise_variants_sweep.txt"
     )
     json_file = log_file.replace(".txt", ".json")
 
@@ -412,7 +484,7 @@ def main():
             all_results.append(result)
 
         # --- Summary table ---
-        emit(f"\n{'='*70}", f)
+        emit(f"\n{'=' * 70}", f)
         emit("SWEEP SUMMARY — Experiment 4.II Priority 1", f)
         emit(f"Model:     {model_id}", f)
         emit(f"Benchmark: gsm8k / main / test", f)
@@ -431,7 +503,7 @@ def main():
                 f"{r['correct']}/{r['total']}",
                 f,
             )
-        emit(f"{'='*70}", f)
+        emit(f"{'=' * 70}", f)
 
     # --- Write combined JSON ---
     json_payload = {

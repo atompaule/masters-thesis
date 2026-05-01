@@ -21,7 +21,10 @@ from src.latent_embedding_experiments.algorithms.soft_thinking_sharpened import 
 )
 from src.latent_embedding_experiments.algorithms.solver import geometric_solver
 from src.latent_embedding_experiments.algorithms.token_sharpening import (
+    noisy_discrete_bernoulli,
+    noisy_discrete_pc_deterministic,
     noisy_target_sim,
+    noisy_discrete_pc_random,
 )
 from src.latent_embedding_experiments.algorithms.utils import emit, select_targets
 
@@ -34,7 +37,7 @@ DISPLAY_K_DIST = 20
 N_INTERLOPERS = 10
 TARGET_SIM = 0.93
 
-NEXT_STEP_EMBEDDING = "soft_thinking"
+NEXT_STEP_EMBEDDING = "noisy_discrete_pc_deterministic"
 
 MODEL_NAME = CFG.model_id.split("/")[1]
 
@@ -109,6 +112,7 @@ def run_latent_comparison_sequence(
 
         context_so_far = PROMPT
         greedy_continuation_ids: list[int] = []
+        pc_cache: dict = {}
 
         with torch.no_grad():
             for step in range(STEPS):
@@ -128,7 +132,9 @@ def run_latent_comparison_sequence(
                 full_probs_scaled = F.softmax(logits / CFG.temperature, dim=-1)
 
                 # --- Min-p target selection ---
-                target_probs, target_ids = select_targets(logits, CFG.temperature, CFG.top_p)
+                target_probs, target_ids = select_targets(
+                    logits, CFG.temperature, CFG.top_p
+                )
                 k = len(target_ids)
 
                 target_probs_scaled = full_probs_scaled[target_ids]
@@ -250,6 +256,58 @@ def run_latent_comparison_sequence(
                 else:
                     v_noisy_discrete = None
 
+                if need("noisy_discrete_bernoulli"):
+                    if v_soft is None:
+                        v_soft = soft_thinking(logits, vocab_embs)
+
+                    v_soft_unit = F.normalize(v_soft, p=2, dim=1)
+                    all_cos_sims = (v_soft_unit @ vocab_embs_norm.T).squeeze(0)
+                    nearest_id = all_cos_sims.argmax().item()
+                    soft_max_sim = all_cos_sims[nearest_id].clamp(-1.0, 1.0).item()
+
+                    v_noisy_discrete_bernoulli = noisy_discrete_bernoulli(
+                        vocab_embs[nearest_id],
+                        target_sim=soft_max_sim,
+                    ).unsqueeze(0)
+                else:
+                    v_noisy_discrete_bernoulli = None
+
+                if need("noisy_discrete_pc_random"):
+                    if v_soft is None:
+                        v_soft = soft_thinking(logits, vocab_embs)
+
+                    v_soft_unit = F.normalize(v_soft, p=2, dim=1)
+                    all_cos_sims = (v_soft_unit @ vocab_embs_norm.T).squeeze(0)
+                    nearest_id = all_cos_sims.argmax().item()
+                    soft_max_sim = all_cos_sims[nearest_id].clamp(-1.0, 1.0).item()
+
+                    v_noisy_discrete_pc_random = noisy_discrete_pc_random(
+                        vocab_embs[nearest_id],
+                        embedding_matrix=vocab_embs,
+                        target_sim=soft_max_sim,
+                        _pc_cache=pc_cache,
+                    ).unsqueeze(0)
+                else:
+                    v_noisy_discrete_pc_random = None
+
+                if need("noisy_discrete_pc_deterministic"):
+                    if v_soft is None:
+                        v_soft = soft_thinking(logits, vocab_embs)
+
+                    v_soft_unit = F.normalize(v_soft, p=2, dim=1)
+                    all_cos_sims = (v_soft_unit @ vocab_embs_norm.T).squeeze(0)
+                    nearest_id = all_cos_sims.argmax().item()
+                    soft_max_sim = all_cos_sims[nearest_id].clamp(-1.0, 1.0).item()
+
+                    v_noisy_discrete_pc_deterministic = noisy_discrete_pc_deterministic(
+                        vocab_embs[nearest_id],
+                        embedding_matrix=vocab_embs,
+                        target_sim=soft_max_sim,
+                        _pc_cache=pc_cache,
+                    ).unsqueeze(0)
+                else:
+                    v_noisy_discrete_pc_deterministic = None
+
                 v_clean_soft = (
                     soft_thinking_sharpened_per_token(
                         vocab_embs=vocab_embs,
@@ -298,6 +356,9 @@ def run_latent_comparison_sequence(
                     "discrete_cleaned": v_discrete_cleaned,
                     "discrete_cleaned_dot_rescaled": v_discrete_cleaned_dr,
                     "noisy_discrete": v_noisy_discrete,
+                    "noisy_discrete_bernoulli": v_noisy_discrete_bernoulli,
+                    "noisy_discrete_pc_random": v_noisy_discrete_pc_random,
+                    "noisy_discrete_pc_deterministic": v_noisy_discrete_pc_deterministic,
                     "soft_thinking": v_soft,
                     "clean_soft": v_clean_soft,
                     "latent_head": v_latent_head,
@@ -346,6 +407,12 @@ def run_latent_comparison_sequence(
                         v_discrete_cleaned_dr,
                     ),
                     "noisy_discrete": ("NoisyDisc", v_noisy_discrete),
+                    "noisy_discrete_bernoulli": (
+                        "NoisyBernoulli",
+                        v_noisy_discrete_bernoulli,
+                    ),
+                    "noisy_discrete_pc_random": ("NoisyPCRandom", v_noisy_discrete_pc_random),
+                    "noisy_discrete_pc_deterministic": ("NoisyPCDet", v_noisy_discrete_pc_deterministic),
                     "soft_thinking": ("Soft", v_soft),
                     "clean_soft": ("CleanSoft", v_clean_soft),
                     "latent_head": ("LatentHead", v_latent_head),
