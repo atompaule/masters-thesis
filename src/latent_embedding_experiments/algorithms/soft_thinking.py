@@ -20,7 +20,7 @@ def soft_thinking(
 
     Returns: [1, d] tensor — the soft thinking embedding.
     """
-    temperature = 0.6
+    temperature = 2.0
     top_p = 0.95
 
     # Select tokens via top-p
