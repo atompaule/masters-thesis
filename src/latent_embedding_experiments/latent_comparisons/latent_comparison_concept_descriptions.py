@@ -77,28 +77,31 @@ def build_fake_logits(target_ids, logit_values, vocab_size):
 
 
 def build_vectors(target_ids, logit_values):
-    """
-    Build all embedding variants from handcrafted target tokens and logits.
-    Uses the same functions as the autoregressive comparison script.
-    """
     vocab_size = vocab_embs.size(0)
     full_logits = build_fake_logits(target_ids, logit_values, vocab_size)
 
-    # Soft thinking (top-p, probability-weighted sum)
     v_soft = soft_thinking(full_logits, vocab_embs)
 
-    # Geometric solver (top-p, ranking-preserving)
     with torch.enable_grad():
         v_solver = geometric_solver(full_logits, vocab_embs)
 
-    # CoLaR-style centroid (unweighted, scaled by 1/sqrt(k))
     raw_embs = vocab_embs[target_ids]
     v_colar = raw_embs.sum(dim=0, keepdim=True) / math.sqrt(len(target_ids))
-
-    # Simple centroid (unweighted mean)
     v_centroid = raw_embs.mean(dim=0, keepdim=True)
 
     return v_soft, v_solver, v_colar, v_centroid
+
+
+def build_baseline_vector(word: str) -> torch.Tensor:
+    """Discrete embedding for a single token — the 'what if the model just saw this word' baseline."""
+    ids = tokenizer.encode(word, add_special_tokens=False)
+    ids2 = tokenizer.encode(word.strip(), add_special_tokens=False)
+    ids = ids if len(ids) == 1 else ids2
+    if len(ids) != 1:
+        raise ValueError(
+            f"Baseline word '{word}' fragments into multiple tokens: {ids}"
+        )
+    return vocab_embs[ids[0]].unsqueeze(0).to(torch.float32)
 
 
 # =========================================================
@@ -214,6 +217,7 @@ experiments = [
             "Real top-10 (8B): after '...consciousness and artificial intelligence is' "
             "(llama_8b_latent_comparison_sequence_discrete_top1.txt)"
         ),
+        "baseline_word": " ability",
         "words": [
             " ability",
             " way",
@@ -243,6 +247,7 @@ experiments = [
     },
     {
         "name": "The Sapphire Summit",
+        "baseline_word": " mountain",
         "words": [" mountain", " galaxy", " snow", " peak", " wind"],
         "logits": [16.0, 15.5, 15.0, 14.5, 14.0],
         "prefix": "Instruction: Vividly describe the concept represented here.\n\nConcept: ",
@@ -250,6 +255,7 @@ experiments = [
     },
     {
         "name": "Mountain",
+        "baseline_word": " mountain",
         "words": [" mountain"],
         "logits": [16.0],
         "prefix": "Instruction: Vividly describe the concept represented here.\n\nConcept: ",
@@ -257,6 +263,7 @@ experiments = [
     },
     {
         "name": "City on top — excitement, inspiration, and related uplift",
+        "baseline_word": " city",
         "words": [" city", " excitement", " inspiration", " bright", " hope"],
         "logits": [16.0, 15.5, 15.0, 14.5, 14.0],
         "prefix": "Instruction: Vividly describe the concept represented here.\n\nConcept: ",
@@ -264,6 +271,7 @@ experiments = [
     },
     {
         "name": "City on top — dark, depressed, and related low-affect tone",
+        "baseline_word": " city",
         "words": [" city", " dark", " depressed", " bleak", " sad"],
         "logits": [16.0, 15.5, 15.0, 14.5, 14.0],
         "prefix": "Instruction: Vividly describe the concept represented here.\n\nConcept: ",
@@ -271,6 +279,7 @@ experiments = [
     },
     {
         "name": "The Overgrown Relic",
+        "baseline_word": " forest",
         "words": [" forest", " magic", " ancient", " green", " magic"],
         "logits": [16.0, 15.5, 15.0, 14.5, 14.0],
         "prefix": "Instruction: Vividly describe the concept represented here.\n\nConcept: ",
@@ -278,6 +287,7 @@ experiments = [
     },
     {
         "name": "The Sommelier's Blind Taste Test",
+        "baseline_word": " coffee",
         "words": [" coffee", " vanilla", " oat", " smoke"],
         "logits": [15.5, 15.5, 15.0, 14.5],
         "prefix": "Instruction: Vividly describe the concept represented here.\n\nConcept: ",
@@ -290,8 +300,7 @@ with open(EXP_CFG.log_file, "w", encoding="utf-8") as f:
 
     emit("LATENT CONCEPT DESCRIPTION EXPERIMENT", f)
     emit(
-        f"Temp: {CFG.temperature} | top_p: {CFG.top_p} | "
-        f"Solver steps: {CFG.solver_steps}",
+        f"Temp: {CFG.temperature} | top_p: {CFG.top_p} | ",
         f,
     )
     emit("", f)
@@ -362,13 +371,11 @@ with open(EXP_CFG.log_file, "w", encoding="utf-8") as f:
         emit(df_inputs.to_string(), f)
 
         # --- Build vectors ---
-        v_soft, v_solver, v_colar, v_centroid = build_vectors(
-            target_ids,
-            logit_values,
-        )
+        v_soft, v_solver, v_colar, v_centroid = build_vectors(target_ids, logit_values)
+        v_baseline = build_baseline_vector(exp["baseline_word"])
 
-        vectors = torch.cat([v_soft, v_solver, v_colar, v_centroid], dim=0)
-        labels = ["Soft", "Solver", "CoLaR", "Centroid"]
+        vectors = torch.cat([v_baseline, v_soft, v_solver, v_colar, v_centroid], dim=0)
+        labels = ["Baseline", "Soft", "Solver", "CoLaR", "Centroid"]
 
         # --- Cross-similarity of output vectors ---
         vectors_unit = F.normalize(vectors, dim=1)
@@ -392,9 +399,10 @@ with open(EXP_CFG.log_file, "w", encoding="utf-8") as f:
         # --- Generation ---
         emit("\n--- CONCEPT DESCRIPTIONS ---", f)
 
-        for name, vec in zip(labels, [v_soft, v_solver, v_colar, v_centroid]):
+        for name, vec in zip(
+            labels, [v_baseline, v_soft, v_solver, v_colar, v_centroid]
+        ):
             text, lines = splice_and_evaluate(exp["prefix"], exp["suffix"], vec)
-
             emit(f"\n  {name:>8} → '{text}'", f)
             for line in lines:
                 emit(line, f)
