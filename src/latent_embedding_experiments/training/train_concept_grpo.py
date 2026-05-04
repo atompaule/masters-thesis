@@ -42,13 +42,14 @@ from src.latent_embedding_experiments.algorithms.soft_thinking import soft_think
 @dataclass
 class Config:
     # Model
-    model_id: str = "meta-llama/Llama-3.2-1B-Instruct"
+    model_id: str = "meta-llama/Llama-3.1-8B-Instruct"
 
     # Think sequence
-    k: int = 4  # tokens sampled per think step
-    sample_temp: float = 0.6  # high temperature → diverse concept sets
+    top_p: float = 0.9  # nucleus mass for concept embedding
+    temp_start: float = 0.3  # initial sampling temperature (sharp)
+    temp_end: float = 1.6  # final sampling temperature (diffuse)
+    temp_anneal_every: int = 50  # steps between temperature increments
     min_think_steps: int = 1  # always take at least this many steps
-    max_think_steps: int = 100  # hard cap even if threshold never reached
 
     # --- The Rolling Wave ---
     trigger_window: int = 3  # 'c': watch the last c steps
@@ -70,11 +71,10 @@ class Config:
 
     # GRPO
     G: int = 4
-    kl_coef: float = 0.05
     advantage_eps: float = 1e-8
 
     # Generation
-    max_new_tokens: int = 512
+    max_tokens: int = 512
     gen_temp: float = 0.8
 
     # Training
@@ -88,8 +88,8 @@ class Config:
     # Logging / checkpointing
     log_every: int = 10
     save_every: int = 250
-    log_file: str = "logs/exp7_think_sequences.txt"
-    output_dir: str = "checkpoints/exp7_grpo_think"
+    log_file: str = "latent_embedding_experiments/logs/exp7_think_sequences.txt"
+    output_dir: str = "latent_embedding_experiments/checkpoints/exp7_grpo_think"
 
 
 CFG = Config()
@@ -118,18 +118,22 @@ lora_cfg = LoraConfig(
 model = get_peft_model(base, lora_cfg)
 model.print_trainable_parameters()
 
-ref_model = copy.deepcopy(model).eval()
-for p in ref_model.parameters():
-    p.requires_grad_(False)
-
 device = next(model.parameters()).device
+print("Device: ", device)
 vocab_embs = model.get_input_embeddings().weight.detach().float()
 
 
 # ── Answer-trigger tokens ─────────────────────────────────────────────────────
 # We sever the word from the colon to ensure we catch the raw, isolated token.
 
-_TRIGGER_STRINGS = ["answer", "Answer", " answer", " Answer", "\nanswer", "\nAnswer"]
+_TRIGGER_STRINGS = [
+    "answer",
+    "Answer",
+    " answer",
+    " Answer",
+    "\nanswer",
+    "\nAnswer",
+]
 _trigger_id_set = set()
 
 for _s in _TRIGGER_STRINGS:
@@ -142,9 +146,7 @@ ANSWER_TRIGGER_IDS = torch.tensor(
     sorted(_trigger_id_set), dtype=torch.long, device=device
 )
 print(f"Answer-trigger token IDs : {ANSWER_TRIGGER_IDS.tolist()}")
-print(
-    f"  decoded                : {[tokenizer.decode([i]) for i in ANSWER_TRIGGER_IDS.tolist()]}"
-)
+print(f"  decoded: {[tokenizer.decode([i]) for i in ANSWER_TRIGGER_IDS.tolist()]}")
 
 
 # ── Dataset ───────────────────────────────────────────────────────────────────
@@ -163,7 +165,7 @@ def make_prompt(question: str) -> str:
     )
 
 
-ANSWER_SUFFIX = "\nConclusion: "
+ANSWER_SUFFIX = "\nanswer: "
 
 
 # ── Reward ────────────────────────────────────────────────────────────────────
@@ -180,7 +182,13 @@ def gsm8k_reward(generated: str, gt_answer: str) -> float:
         return 0.0
     gt = float(m.group(1).replace(",", ""))
     boxed = re.search(r"\\boxed\{([\d,.\-]+)\}", generated)
-    pred = float(boxed.group(1).replace(",", "")) if boxed else _last_number(generated)
+    if boxed:
+        try:
+            pred = float(boxed.group(1).replace(",", ""))
+        except ValueError:
+            pred = _last_number(boxed.group(1))
+    else:
+        pred = _last_number(generated)
     return 1.0 if pred is not None and abs(pred - gt) < 1e-3 else 0.0
 
 
@@ -189,14 +197,28 @@ def gsm8k_reward(generated: str, gt_answer: str) -> float:
 
 def build_concept_embedding(
     logits: torch.Tensor,
+    temp: float,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-    probs = F.softmax(logits / CFG.sample_temp, dim=-1)
-    sample_ids = torch.multinomial(probs, CFG.k, replacement=False)
+    probs = F.softmax(logits / temp, dim=-1)
+
+    # Step 1: use top-p only to determine n
+    sorted_probs, _ = torch.sort(probs, descending=True)
+    cumsum = torch.cumsum(sorted_probs, dim=-1)
+    nucleus_mask = (cumsum - sorted_probs) < CFG.top_p
+    nucleus_mask[0] = True  # always at least 1
+    n = int(nucleus_mask.sum().item())
+
+    # Step 2: sample n tokens from the full distribution
+    sample_ids = torch.multinomial(probs, n, replacement=False)
     sample_probs = probs[sample_ids]
 
+    # Sort descending by prob so logging displays highest-mass tokens first
+    order = torch.argsort(sample_probs, descending=True)
+    sample_ids = sample_ids[order]
+    sample_probs = sample_probs[order]
+
     fake_logits = torch.full((vocab_embs.size(0),), -100.0, device=device)
-    for tid in sample_ids.tolist():
-        fake_logits[tid] = logits[tid]
+    fake_logits[sample_ids] = logits[sample_ids]
 
     concept_vec = soft_thinking(fake_logits, vocab_embs.to(device))
     return concept_vec, sample_ids, sample_probs
@@ -208,6 +230,7 @@ def build_concept_embedding(
 @torch.no_grad()
 def build_think_sequence(
     prefix_ids: torch.Tensor,
+    temp: float,
     m: torch.nn.Module | None = None,
 ) -> tuple[list, list, list, str, object, list, list]:
     if m is None:
@@ -226,7 +249,7 @@ def build_think_sequence(
     window_sums = []  # <--- Keep track of the rolling pressure
     stop_reason = "max_steps"
 
-    for step in range(CFG.max_think_steps):
+    for step in range(CFG.max_tokens):
         probs = F.softmax(logits, dim=-1)
         trigger_p = probs[ANSWER_TRIGGER_IDS].sum().item()
         trigger_probs.append(trigger_p)
@@ -235,14 +258,17 @@ def build_think_sequence(
         window_sum = sum(trigger_probs[-CFG.trigger_window :])
         window_sums.append(window_sum)
 
-        # The dam breaks only if the sustained wave crests the threshold
+        if step >= CFG.min_think_steps and logits.argmax().item() in _trigger_id_set:
+            stop_reason = "threshold"
+            break
+
         if step >= CFG.min_think_steps and window_sum > CFG.think_stop_threshold:
             stop_reason = "threshold"
             break
 
         argmax_ids_list.append(logits.argmax(dim=-1).item())
 
-        concept_vec, sample_ids, sample_probs = build_concept_embedding(logits)
+        concept_vec, sample_ids, sample_probs = build_concept_embedding(logits, temp)
         concept_vecs.append(concept_vec)
         sample_ids_list.append(sample_ids)
         sample_probs_list.append(sample_probs)
@@ -260,7 +286,8 @@ def build_think_sequence(
         stop_reason,
         past_kv,
         argmax_ids_list,
-        window_sums,  # Pass the swelling tide to the logger
+        window_sums,
+        logits,
     )
 
 
@@ -273,17 +300,27 @@ def generate_from_past_kv(
     first_logits: torch.Tensor,
     m: torch.nn.Module | None = None,
 ) -> list[int]:
+    """Sample tokens one at a time, stopping early if the answer box closes."""
     if m is None:
         m = model
 
     gen_ids = []
     logits = first_logits
 
-    for _ in range(CFG.max_new_tokens):
+    for _ in range(CFG.max_tokens):
         probs = F.softmax(logits / CFG.gen_temp, dim=-1)
         next_id = torch.multinomial(probs, 1).item()
         gen_ids.append(next_id)
-        if next_id == tokenizer.eos_token_id:
+
+        # Decode the sequence up to this point (matches your eval script logic)
+        current_text = tokenizer.decode(gen_ids, skip_special_tokens=True)
+
+        # Break if the model natively stops, OR if it fully closed the math box
+        if (
+            next_id == tokenizer.eos_token_id
+            or "}" in current_text
+            or "\n\n" in current_text
+        ):
             break
 
         next_emb = m.get_input_embeddings()(torch.tensor([[next_id]], device=device))
@@ -297,8 +334,17 @@ def generate_from_past_kv(
 # ── Rollout ───────────────────────────────────────────────────────────────────
 
 
+def get_temp(step: int) -> float:
+    """Linear temperature anneal from temp_start → temp_end, stepping every N steps."""
+    n_increments = (CFG.max_steps - 1) // CFG.temp_anneal_every
+    if n_increments == 0:
+        return CFG.temp_start
+    progress = min((step - 1) // CFG.temp_anneal_every / n_increments, 1.0)
+    return CFG.temp_start + progress * (CFG.temp_end - CFG.temp_start)
+
+
 @torch.no_grad()
-def rollout(prompt: str, gt_answer: str) -> dict:
+def rollout(prompt: str, gt_answer: str, temp: float) -> dict:
     prefix_ids = tokenizer(
         prompt, return_tensors="pt", add_special_tokens=False
     ).input_ids.to(device)
@@ -316,14 +362,32 @@ def rollout(prompt: str, gt_answer: str) -> dict:
         past_kv_think,
         argmax_ids_list,
         window_sums,
-    ) = build_think_sequence(prefix_ids)
+        last_logits,
+    ) = build_think_sequence(prefix_ids, temp)
 
-    out = model(input_ids=suffix_ids, past_key_values=past_kv_think, use_cache=True)
-    past_kv_suffix = out.past_key_values
-    first_gen_logits = out.logits[0, -1, :].float()
+    ANSWER_PREFIX = "$\\boxed{"
 
-    gen_ids = generate_from_past_kv(past_kv_suffix, first_gen_logits)
-    generated_text = tokenizer.decode(gen_ids, skip_special_tokens=True)
+    if stop_reason == "threshold":
+        prefix_ids = tokenizer(
+            ANSWER_PREFIX, return_tensors="pt", add_special_tokens=False
+        ).input_ids.to(device)
+        out = model(input_ids=prefix_ids, past_key_values=past_kv_think, use_cache=True)
+        past_kv_ans = out.past_key_values
+        first_gen_logits = out.logits[0, -1, :].float()
+        gen_prefix_text = ANSWER_PREFIX
+    else:
+        suffix_ids = tokenizer(
+            ANSWER_SUFFIX + ANSWER_PREFIX, return_tensors="pt", add_special_tokens=False
+        ).input_ids.to(device)
+        out = model(input_ids=suffix_ids, past_key_values=past_kv_think, use_cache=True)
+        past_kv_ans = out.past_key_values
+        first_gen_logits = out.logits[0, -1, :].float()
+        gen_prefix_text = ANSWER_PREFIX
+
+    gen_ids = generate_from_past_kv(past_kv_ans, first_gen_logits)
+    generated_text = gen_prefix_text + tokenizer.decode(
+        gen_ids, skip_special_tokens=True
+    )
 
     return {
         "prefix_ids": prefix_ids,
@@ -344,7 +408,7 @@ def rollout(prompt: str, gt_answer: str) -> dict:
 # ── Log-prob computation & GRPO Loss ──────────────────────────────────────────
 
 
-def compute_policy_log_probs(r: dict) -> tuple[torch.Tensor, torch.Tensor]:
+def compute_policy_log_probs(r: dict, temp: float) -> tuple[torch.Tensor, torch.Tensor]:
     concept_vecs = r["concept_vecs"]
     sample_ids_list = r["sample_ids_list"]
     gen_ids = r["gen_ids"]
@@ -398,7 +462,7 @@ def compute_policy_log_probs(r: dict) -> tuple[torch.Tensor, torch.Tensor]:
         p_trigger = F.softmax(logits_t, dim=-1)[ANSWER_TRIGGER_IDS].sum()
         sampling_lp = sampling_lp + torch.log(1.0 - p_trigger + 1e-8)
 
-        log_p = F.log_softmax(logits_t / CFG.sample_temp, dim=-1)
+        log_p = F.log_softmax(logits_t / temp, dim=-1)
         sampling_lp = sampling_lp + log_p[sample_ids].sum()
 
     if r["stop_reason"] == "threshold":
@@ -417,58 +481,15 @@ def compute_policy_log_probs(r: dict) -> tuple[torch.Tensor, torch.Tensor]:
     return sampling_lp, gen_lp
 
 
-@torch.no_grad()
-def compute_ref_log_probs(r: dict) -> torch.Tensor:
-    gen_ids = r["gen_ids"]
-    if not gen_ids:
-        return torch.zeros(1, device=device).squeeze()
-
-    N = len(r["concept_vecs"])
-    prefix_emb = ref_model.get_input_embeddings()(r["prefix_ids"])
-    suffix_emb = ref_model.get_input_embeddings()(r["suffix_ids"])
-    P = prefix_emb.shape[1]
-    S = suffix_emb.shape[1]
-    d = prefix_emb.shape[-1]
-
-    think_embs = (
-        torch.cat(
-            [v.to(ref_model.dtype).unsqueeze(0) for v in r["concept_vecs"]], dim=1
-        )
-        if N > 0
-        else torch.zeros(1, 0, d, device=device, dtype=ref_model.dtype)
-    )
-
-    gen_ids_t = torch.tensor(gen_ids, device=device)
-    gen_emb = ref_model.get_input_embeddings()(gen_ids_t.unsqueeze(0))
-
-    input_emb = torch.cat(
-        [
-            prefix_emb.to(ref_model.dtype),
-            think_embs,
-            suffix_emb.to(ref_model.dtype),
-            gen_emb[:, :-1],
-        ],
-        dim=1,
-    )
-
-    logits = ref_model(inputs_embeds=input_emb).logits[0].float()
-    gen_logits = logits[P + N + S - 1 : P + N + S - 1 + len(gen_ids)]
-    token_lp = F.log_softmax(gen_logits, dim=-1)
-    return token_lp[torch.arange(len(gen_ids), device=device), gen_ids_t].sum()
-
-
-def grpo_loss(rollouts: list[dict]) -> torch.Tensor:
+def grpo_loss(rollouts: list[dict], temp) -> torch.Tensor:
     rewards = torch.tensor([r["reward"] for r in rollouts], dtype=torch.float32)
     advantages = (rewards - rewards.mean()) / (rewards.std() + CFG.advantage_eps)
 
     loss = torch.zeros(1, device=device)
     for i, r in enumerate(rollouts):
-        sampling_lp, gen_lp = compute_policy_log_probs(r)
-        ref_gen_lp = compute_ref_log_probs(r)
+        sampling_lp, gen_lp = compute_policy_log_probs(r, temp)
         A = advantages[i].to(device)
-        loss = loss + (
-            -A * (sampling_lp + gen_lp) + CFG.kl_coef * (gen_lp - ref_gen_lp)
-        )
+        loss = loss + (-A * (sampling_lp + gen_lp))
     return loss / CFG.G
 
 
@@ -511,11 +532,12 @@ SEP = "─" * 80
 
 log("Starting GRPO dynamic-think training...")
 log(
-    f"min_think={CFG.min_think_steps}  max_think={CFG.max_think_steps}  "
-    f"threshold={CFG.think_stop_threshold}  window={CFG.trigger_window}  k={CFG.k}"
+    f"min_think={CFG.min_think_steps}  max_tokens={CFG.max_tokens}  "
+    f"threshold={CFG.think_stop_threshold}  window={CFG.trigger_window}"
 )
 
 for step in range(1, CFG.max_steps + 1):
+    temp = get_temp(step)
 
     try:
         batch = next(data_iter)
@@ -530,7 +552,7 @@ for step in range(1, CFG.max_steps + 1):
     for question, answer in zip(batch["question"], batch["answer"]):
 
         prompt = make_prompt(question)
-        rollouts = [rollout(prompt, answer) for _ in range(CFG.G)]
+        rollouts = [rollout(prompt, answer, temp) for _ in range(CFG.G)]
         rewards = [r["reward"] for r in rollouts]
         step_reward += sum(rewards) / len(rewards)
 
@@ -550,24 +572,27 @@ for step in range(1, CFG.max_steps + 1):
             )
 
             # Decode the sheer, highest-probability instinct
-            if n > 0:
-                argmax_text = tokenizer.decode(r["argmax_ids_list"])
-                clean_text = argmax_text.replace("\n", "↵").replace("\t", "⇥")
-                log(f"    🧠 Discrete Path: {clean_text}")
-            else:
-                log(f"    🧠 Discrete Path: (No think steps taken)")
+            _GRAY = "\033[90m"
+            _RESET = "\033[0m"
 
-            # The tension meter now reflects the heavy, rolling wave of the last 'c' steps
-            if r["window_sums"]:
-                final_wave = r["window_sums"][-1]
-                tension = min(10, int((final_wave / CFG.think_stop_threshold) * 10))
-                gauge = "■" * tension + "□" * (10 - tension)
-                stop_str = (
-                    "Wave Crested"
-                    if r["stop_reason"] == "threshold"
-                    else "Hit max steps"
-                )
-                log(f"    🏁 stop │ {gauge} {final_wave:.3f} │ ({stop_str})")
+            if n > 0:
+                log(f"    🧠 Concept path ({n} steps):")
+                line = "       "
+                for ids, probs in zip(r["sample_ids_list"], r["sample_probs_list"]):
+                    top_tok = (
+                        tokenizer.decode([ids[0].item()])
+                        .replace("\n", "↵")
+                        .replace("\t", "⇥")
+                    )
+                    alts = [
+                        tokenizer.decode([tid]).replace("\n", "↵").replace("\t", "⇥")
+                        for tid in ids[1:].tolist()
+                    ]
+                    alt_str = _GRAY + "/".join(alts) + _RESET if alts else ""
+                    line += top_tok + ("/" + alt_str if alt_str else "") + ""
+                log(line)
+            else:
+                log(f"    🧠 Concept path: (no steps taken)")
 
             full = r["generated_text"].strip()
             indented = "\n           ".join(full.splitlines()) if full else "(empty)"
@@ -579,7 +604,7 @@ for step in range(1, CFG.max_steps + 1):
             n_skipped += 1
             continue
 
-        loss = grpo_loss(rollouts) / CFG.grad_accum
+        loss = grpo_loss(rollouts, temp) / CFG.grad_accum
         loss.backward()
         step_loss += loss.item() * CFG.grad_accum
 
@@ -600,7 +625,7 @@ for step in range(1, CFG.max_steps + 1):
         lr_now = scheduler.get_last_lr()[0]
         log(
             f"\n>>> step {step:5d} | loss {avg_l:.4f} | reward {avg_r:.3f}"
-            f" | lr {lr_now:.2e} | skipped {n_skipped}/{CFG.batch_size}"
+            f" | lr {lr_now:.2e} | temp {temp:.3f} | skipped {n_skipped}/{CFG.batch_size}"
         )
         running_reward = 0.0
         running_loss = 0.0
