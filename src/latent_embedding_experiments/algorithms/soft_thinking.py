@@ -20,14 +20,16 @@ def soft_thinking(
 
     Returns: [1, d] tensor — the soft thinking embedding.
     """
-    temperature = 2.0
-    top_p = 0.95
+    temperature = 1.0
+    top_p = 1.0
 
     # Select tokens via top-p
     target_props, target_ids = select_targets(logits, temperature, top_p)
 
     # Weighted sum of embeddings
     target_embs = vocab_embs[target_ids]  # [k, d]
-    result = (target_props.unsqueeze(1) * target_embs).sum(dim=0, keepdim=True)  # [1, d]
+    result = (target_props.unsqueeze(1) * target_embs).sum(
+        dim=0, keepdim=True
+    )  # [1, d]
 
     return result
