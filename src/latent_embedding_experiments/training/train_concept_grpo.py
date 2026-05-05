@@ -46,8 +46,8 @@ class Config:
 
     # Think sequence
     top_p: float = 0.9  # nucleus mass for concept embedding
-    temp_start: float = 0.3  # initial sampling temperature (sharp)
-    temp_end: float = 1.6  # final sampling temperature (diffuse)
+    temp_start: float = 0.6  # initial sampling temperature (sharp)
+    temp_end: float = 2.0  # final sampling temperature (diffuse)
     temp_anneal_every: int = 50  # steps between temperature increments
     min_think_steps: int = 1  # always take at least this many steps
 
@@ -78,7 +78,7 @@ class Config:
     gen_temp: float = 0.8
 
     # Training
-    lr: float = 5e-5
+    lr: float = 1e-4
     batch_size: int = 1
     grad_accum: int = 8
     max_steps: int = 2000
@@ -106,6 +106,7 @@ base = AutoModelForCausalLM.from_pretrained(
     device_map="auto",
     torch_dtype=torch.bfloat16,
 )
+base.gradient_checkpointing_enable()
 
 lora_cfg = LoraConfig(
     r=CFG.lora_r,
@@ -451,7 +452,8 @@ def compute_policy_log_probs(r: dict, temp: float) -> tuple[torch.Tensor, torch.
             dim=1,
         )
 
-    logits = model(inputs_embeds=input_emb).logits[0].float()
+    out = model(inputs_embeds=input_emb, use_cache=False)
+    logits = out.logits[0].float()
 
     sampling_lp = torch.zeros(1, device=device).squeeze()
     for t, sample_ids in enumerate(sample_ids_list):
@@ -481,16 +483,27 @@ def compute_policy_log_probs(r: dict, temp: float) -> tuple[torch.Tensor, torch.
     return sampling_lp, gen_lp
 
 
-def grpo_loss(rollouts: list[dict], temp) -> torch.Tensor:
+def compute_and_backward_grpo(rollouts: list[dict], temp) -> float:
     rewards = torch.tensor([r["reward"] for r in rollouts], dtype=torch.float32)
     advantages = (rewards - rewards.mean()) / (rewards.std() + CFG.advantage_eps)
 
-    loss = torch.zeros(1, device=device)
+    total_unscaled_loss = 0.0
+    
     for i, r in enumerate(rollouts):
+        # Build the graph for just ONE rollout
         sampling_lp, gen_lp = compute_policy_log_probs(r, temp)
         A = advantages[i].to(device)
-        loss = loss + (-A * (sampling_lp + gen_lp))
-    return loss / CFG.G
+        
+        # The exact slice of loss for this single rollout
+        loss_i = (-A * (sampling_lp + gen_lp)) / CFG.G
+        
+        # Scale for gradient accumulation, then detonate the backward pass immediately!
+        # This frees the massive activation graph before the next loop iteration.
+        (loss_i / CFG.grad_accum).backward()
+        
+        total_unscaled_loss += loss_i.item()
+
+    return total_unscaled_loss
 
 
 # ── Optimizer + scheduler ─────────────────────────────────────────────────────
@@ -604,9 +617,8 @@ for step in range(1, CFG.max_steps + 1):
             n_skipped += 1
             continue
 
-        loss = grpo_loss(rollouts, temp) / CFG.grad_accum
-        loss.backward()
-        step_loss += loss.item() * CFG.grad_accum
+        loss_val = compute_and_backward_grpo(rollouts, temp)
+        step_loss += loss_val
 
     running_reward += step_reward / CFG.batch_size
     running_loss += step_loss / CFG.batch_size
