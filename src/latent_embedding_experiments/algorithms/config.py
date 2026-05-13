@@ -27,6 +27,34 @@ class SolverConfig:
 
 
 @dataclass
+class RLConfig:
+    lora_r: int = 64
+    lora_alpha: int = 128
+    lora_targets: tuple[str] = (
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj",
+        "gate_proj",
+        "up_proj",
+        "down_proj",
+    )
+
+    group_size: int = 4
+    batch_size: int = 4
+    gradient_accumulation_steps: int = 4
+    max_grad_norm: float = 1.0
+
+    learning_rate: float = 1e-6
+    temperature_start: float = 0.6
+    temperature_end: float = 2.0
+    temperature_increment_every: int = 50
+
+    max_tokens: int = 256
+    max_update_steps: int = 2000
+
+
+@dataclass
 class Config:
     model_id: str = "meta-llama/Llama-3.1-8B-Instruct"
     approaches: list[str] = field(
@@ -54,6 +82,8 @@ class Config:
     num_interlopers: int = 10
 
     solver_config: SolverConfig = field(default_factory=SolverConfig)
+
+    rl_config: RLConfig = field(default_factory=RLConfig)
 
 
 CFG = Config()

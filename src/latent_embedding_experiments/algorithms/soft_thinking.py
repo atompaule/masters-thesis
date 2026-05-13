@@ -1,5 +1,4 @@
 import torch
-import torch.nn.functional as F
 
 from src.latent_embedding_experiments.algorithms.utils import select_targets
 
@@ -24,11 +23,13 @@ def soft_thinking(
     top_p = 1.0
 
     # Select tokens via top-p
-    target_props, target_ids = select_targets(logits, temperature, top_p)
+    target_probs, target_ids = select_targets(logits, temperature, top_p)
+    # if top_p == 1.0:
+    #     assert len(target_probs) == len(logits)
 
     # Weighted sum of embeddings
     target_embs = vocab_embs[target_ids]  # [k, d]
-    result = (target_props.unsqueeze(1) * target_embs).sum(
+    result = (target_probs.unsqueeze(1) * target_embs).sum(
         dim=0, keepdim=True
     )  # [1, d]
 
