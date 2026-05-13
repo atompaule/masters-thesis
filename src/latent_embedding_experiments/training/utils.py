@@ -1,5 +1,10 @@
 import re
 
+import psutil
+import torch
+
+_proc = psutil.Process()
+
 
 def log(seq_log, s: str = ""):
     print(s)
@@ -54,3 +59,32 @@ def log_rollouts(seq_log, tokenizer, rollouts, rewards, question, answer, step):
         log(seq_log, f"    🗣️  Answer:\n           {indented}")
 
     log(seq_log, SEP)
+
+
+def get_memory_gb(device):
+    rss_gb = _proc.memory_info().rss / 1e9
+    dev = str(device)
+    if "cuda" in dev:
+        return (
+            rss_gb,
+            torch.cuda.memory_allocated() / 1e9,
+            torch.cuda.memory_reserved() / 1e9,
+        )
+    if "mps" in dev:
+        try:
+            live = torch.mps.current_allocated_memory() / 1e9
+            driver = torch.mps.driver_allocated_memory() / 1e9
+        except AttributeError:
+            live = driver = 0.0
+        return rss_gb, live, driver
+    return (rss_gb, 0.0, 0.0)
+
+
+def format_duration(seconds: float) -> str:
+    if seconds < 60:
+        return f"{seconds:.0f}s"
+    if seconds < 3600:
+        return f"{int(seconds // 60)}m {int(seconds % 60):02d}s"
+    h = int(seconds // 3600)
+    m = int((seconds % 3600) // 60)
+    return f"{h}h {m:02d}m"

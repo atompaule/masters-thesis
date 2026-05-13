@@ -1,4 +1,5 @@
 import os
+import time
 import re
 
 import torch
@@ -16,7 +17,7 @@ from src.latent_embedding_experiments.data.gsm8k import (
     gsm8k_reward,
     make_prompt,
 )
-from src.latent_embedding_experiments.training.utils import log, log_rollouts
+from src.latent_embedding_experiments.training.utils import log, log_rollouts, get_memory_gb, format_duration
 
 APPROACHES = ""
 
@@ -353,6 +354,9 @@ def train():
 
     n_skipped_batches = 0
 
+    t_start = time.perf_counter()
+    t_window = t_start
+
     for step in range(CFG.rl_config.max_update_steps):
         try:
             batch = next(data_iter)
@@ -430,6 +434,15 @@ def train():
             optimizer.zero_grad()
 
         if (step > 0) and (step % LOG_EVERY == 0):
+            now = time.perf_counter()
+            window_secs = now - t_window
+            elapsed = now - t_start
+            secs_per_step = window_secs / LOG_EVERY
+            steps_left = CFG.rl_config.max_update_steps - step
+            eta_secs = secs_per_step * steps_left
+
+            rss_gb, live_gb, driver_gb = get_memory_gb(device)
+
             denom = max(LOG_EVERY - n_skipped_batches, 1)
             avg_r = running_reward / (LOG_EVERY * CFG.rl_config.batch_size)
             avg_l = running_loss / denom
@@ -437,12 +450,18 @@ def train():
             log(
                 seq_log,
                 f"\n>>> step {step:5d} | loss {avg_l:.4f} | reward {avg_r:.3f}"
-                f"| temp {temp:.3f} | skipped questions {n_skipped_questions}/{CFG.rl_config.batch_size}",
+                f" | temp {temp:.3f}"
+                f" | skipped {n_skipped_questions}/{CFG.rl_config.batch_size}"
+                f" | mem rss {rss_gb:.1f} live {live_gb:.1f} drv {driver_gb:.1f}GB"
+                f" | {secs_per_step:.1f}s/step"
+                f" | elapsed {format_duration(elapsed)}"
+                f" | ETA {format_duration(eta_secs)}",
             )
 
             running_reward = 0.0
             running_loss = 0.0
             n_skipped_batches = 0
+            t_window = now
 
         if (step > 0) and (step % SAVE_EVERY == 0):
             ckpt = os.path.join(OUTPUT_DIR, f"step_{step:05d}")
