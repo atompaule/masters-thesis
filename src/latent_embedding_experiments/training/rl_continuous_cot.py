@@ -1,6 +1,7 @@
+import gc
 import os
-import time
 import re
+import time
 
 import torch
 import torch.nn.functional as F
@@ -17,18 +18,29 @@ from src.latent_embedding_experiments.data.gsm8k import (
     gsm8k_reward,
     make_prompt,
 )
-from src.latent_embedding_experiments.training.utils import log, log_rollouts, get_memory_gb, format_duration
+from src.latent_embedding_experiments.training.utils import (
+    format_duration,
+    get_memory_gb,
+    log,
+    log_rollouts,
+)
 
 APPROACHES = ""
-
+DATE = str(time.time()).split(".")[0]
 OUTPUT_DIR = "latent_embedding_experiments/checkpoints/exp7_grpo_think"
-LOG_FILE = "latent_embedding_experiments/logs/exp7_think_sequences.txt"
+LOG_FILE = f"latent_embedding_experiments/logs/rl_continuous_cot_{CFG.model_id.split('/')[-1]}_{DATE}.txt"
 
-LOG_EVERY = 10
+LOG_EVERY = 1
 SAVE_EVERY = 250
 
-print(f"Loading {CFG.model_id}...")
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
+seq_log = open(LOG_FILE, "w", encoding="utf-8")
+
+log(seq_log, f"Loading {CFG.model_id}...")
 tokenizer = AutoTokenizer.from_pretrained(CFG.model_id)
+tokenizer.pad_token = tokenizer.eos_token
+
 base_model = AutoModelForCausalLM.from_pretrained(
     CFG.model_id,
     device_map="auto",
@@ -43,22 +55,22 @@ lora_cfg = LoraConfig(
     r=CFG.rl_config.lora_r,  # number of cols in lora matrices
     lora_alpha=CFG.rl_config.lora_alpha,  # scalar that determines relative influence of the lora matrices on frozen base
     target_modules=list(
-        CFG.rl_config.lora_targets
+        ["c_attn", "c_proj", "c_fc"]
+        if CFG.model_id == "gpt2"
+        else CFG.rl_config.lora_targets
     ),  # fine-tune all projections of the model, except for embedding matrices
     task_type=TaskType.CAUSAL_LM,
 )
 model = get_peft_model(base_model, lora_cfg)
 
 device = model.device
-print(f"Using {device}")
+log(seq_log, f"Using {device}")
 
-
-vocab_embeds_cpu = model.get_input_embeddings().weight.detach().cpu().bfloat16()
-vocab_embeds_device = vocab_embeds_cpu.to(device)
-print(f"Loaded vocab_embeds")
+model_embeddings = model.get_input_embeddings()
+vocab_embeds_device = model_embeddings.weight.detach().bfloat16().to(device)
 
 # these are only needed for the gaussian_noise approach, but compute them here for efficiency
-rms_norm = vocab_embeds_cpu.norm(dim=-1).pow(2).mean().sqrt()
+rms_norm = vocab_embeds_device.norm(dim=-1).pow(2).mean().sqrt()
 sigma = 0.33 * rms_norm
 
 # TODO: should we use warmup steps despite temperature curriculum?
@@ -67,10 +79,6 @@ optimizer = AdamW(
     lr=CFG.rl_config.learning_rate,
     weight_decay=0.01,
 )
-
-os.makedirs(OUTPUT_DIR, exist_ok=True)
-os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
-seq_log = open(LOG_FILE, "w", encoding="utf-8")
 
 
 _TRIGGER_STRINGS = [
@@ -95,6 +103,13 @@ ANSWER_TRIGGER_IDS = torch.tensor(
 
 ANSWER_STRING = "\nanswer: "
 BOXED_STRING = "$\\boxed{"
+
+prefix_ids_threshold = tokenizer(
+    BOXED_STRING, return_tensors="pt", add_special_tokens=False
+).input_ids.to(device)
+prefix_ids_maxsteps = tokenizer(
+    ANSWER_STRING + BOXED_STRING, return_tensors="pt", add_special_tokens=False
+).input_ids.to(device)
 
 
 def get_temp(step: int):
@@ -141,7 +156,7 @@ def build_concept_embedding(logits: torch.Tensor, temp: float, approach: str):
 
 @torch.no_grad()
 def rollout_single_think_sequence(prompt_ids: torch.Tensor, temp: float, approach: str):
-    prompt_embeds = model.get_input_embeddings()(prompt_ids)
+    prompt_embeds = model_embeddings(prompt_ids)
 
     out = model(inputs_embeds=prompt_embeds.to(model.dtype), use_cache=True)
     past_kv = out.past_key_values
@@ -178,7 +193,7 @@ def rollout_single_think_sequence(prompt_ids: torch.Tensor, temp: float, approac
             logits, temp, approach
         )
 
-        concept_vecs.append(concept_vec.cpu())
+        concept_vecs.append(concept_vec)
         sample_ids_list.append(sample_ids)
         sample_probs_list.append(sample_probs)
 
@@ -223,7 +238,7 @@ def rollout_single_answer_sequence(past_kv_ans: object, logits: torch.Tensor):
         ):
             break
 
-        next_embed = model.get_input_embeddings()(
+        next_embed = model_embeddings(
             torch.tensor([[next_id]], device=device)
         )
         out = model(
@@ -255,22 +270,17 @@ def rollout_single(prompt: str, gt_answer: str, temp: float, approach: str):
 
     if stop_reason == "threshold":
         # answer token already generated, only add prefix
-        prefix_ids = tokenizer(
-            BOXED_STRING, return_tensors="pt", add_special_tokens=False
-        ).input_ids.to(device)
+        prefix_ids = prefix_ids_threshold
     else:
         # force added answer token
-        prefix_ids = tokenizer(
-            ANSWER_STRING + BOXED_STRING, return_tensors="pt", add_special_tokens=False
-        ).input_ids.to(device)
+        prefix_ids = prefix_ids_maxsteps
 
     out = model(input_ids=prefix_ids, past_key_values=past_kv_think, use_cache=True)
     past_kv_ans = out.past_key_values
     first_answer_logits = out.logits[0, -1, :].float()
-    gen_prefix_text = BOXED_STRING
 
     answer_ids = rollout_single_answer_sequence(past_kv_ans, first_answer_logits)
-    generated_text = gen_prefix_text + tokenizer.decode(
+    generated_text = BOXED_STRING + tokenizer.decode(
         answer_ids, skip_special_tokens=True
     )
 
@@ -290,7 +300,7 @@ def rollout_single(prompt: str, gt_answer: str, temp: float, approach: str):
 
 
 def policy_log_prob(rollout, approach, temp):
-    prompt_embeds = model.get_input_embeddings()(rollout["prompt_ids"]).detach()
+    prompt_embeds = model_embeddings(rollout["prompt_ids"]).detach()
     prompt_len = prompt_embeds.size(1)
 
     concept_vecs = torch.stack(rollout["concept_vecs"]).to(device, dtype=model.dtype)
@@ -372,12 +382,23 @@ def train():
 
         for question, answer in zip(batch["question"], batch["answer"]):
             # rollouts
-            prompt = make_prompt(question)
+            rss_gb, live_gb, driver_gb = get_memory_gb(device)
+            log(
+                seq_log,
+                f" | BEFORE | mem rss {rss_gb:.3f} live {live_gb:.3f} drv {driver_gb:.3f}GB",
+            )
 
             group_rollouts = [
-                rollout_single(prompt, answer, temp, approach)
+                rollout_single(question, answer, temp, approach)
                 for _ in range(CFG.rl_config.group_size)
             ]
+
+            rss_gb, live_gb, driver_gb = get_memory_gb(device)
+            log(
+                seq_log,
+                f" | AFTER | mem rss {rss_gb:.3f} live {live_gb:.3f} drv {driver_gb:.3f}GB",
+            )
+
             group_rewards = torch.tensor(
                 [
                     gsm8k_reward(rollout["generated_text"], answer)
@@ -387,15 +408,15 @@ def train():
             )
             running_reward += group_rewards.mean().item()
 
-            log_rollouts(
-                seq_log,
-                tokenizer,
-                group_rollouts,
-                group_rewards,
-                question,
-                answer,
-                step,
-            )
+            # log_rollouts(
+            #     seq_log,
+            #     tokenizer,
+            #     group_rollouts,
+            #     group_rewards,
+            #     question,
+            #     answer,
+            #     step,
+            # )
 
             if group_rewards.unique().numel() == 1:
                 # no step given invariant rewards
@@ -452,7 +473,7 @@ def train():
                 f"\n>>> step {step:5d} | loss {avg_l:.4f} | reward {avg_r:.3f}"
                 f" | temp {temp:.3f}"
                 f" | skipped {n_skipped_questions}/{CFG.rl_config.batch_size}"
-                f" | mem rss {rss_gb:.1f} live {live_gb:.1f} drv {driver_gb:.1f}GB"
+                f" | mem rss {rss_gb:.3f} live {live_gb:.3f} drv {driver_gb:.3f}GB"
                 f" | {secs_per_step:.1f}s/step"
                 f" | elapsed {format_duration(elapsed)}"
                 f" | ETA {format_duration(eta_secs)}",
