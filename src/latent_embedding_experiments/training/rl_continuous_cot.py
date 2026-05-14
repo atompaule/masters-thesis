@@ -238,9 +238,7 @@ def rollout_single_answer_sequence(past_kv_ans: object, logits: torch.Tensor):
         ):
             break
 
-        next_embed = model_embeddings(
-            torch.tensor([[next_id]], device=device)
-        )
+        next_embed = model_embeddings(torch.tensor([[next_id]], device=device))
         out = model(
             inputs_embeds=next_embed, past_key_values=past_kv_ans, use_cache=True
         )
@@ -339,15 +337,6 @@ def policy_log_prob(rollout, approach, temp):
         pass
 
     return total_log_prob
-
-
-def rloo_group_loss(log_probs, rewards):
-    baseline_rewards = (rewards.sum() - rewards) / (len(rewards) - 1)
-    advantages = rewards - baseline_rewards
-
-    losses = advantages * log_probs
-    # mean instead of sum to make it independent of group size
-    return -torch.mean(losses)
 
 
 def train():
