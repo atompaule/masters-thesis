@@ -307,7 +307,6 @@ def policy_log_prob(rollout, approach, temp):
     concept_vecs = concept_vecs.unsqueeze(0)
 
     full_embeds = torch.cat([prompt_embeds, concept_vecs], dim=1)
-    full_embeds.requires_grad_(True)  # needed for gradient checkpointing
 
     out = model(inputs_embeds=full_embeds, use_cache=False)
 
@@ -388,8 +387,10 @@ def train():
                 f" | BEFORE | mem rss {rss_gb:.3f} live {live_gb:.3f} drv {driver_gb:.3f}GB",
             )
 
+            prompt = make_prompt(question)
+
             group_rollouts = [
-                rollout_single(question, answer, temp, approach)
+                rollout_single(prompt, answer, temp, approach)
                 for _ in range(CFG.rl_config.group_size)
             ]
 
