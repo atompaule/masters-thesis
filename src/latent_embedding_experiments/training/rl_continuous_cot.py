@@ -1,11 +1,10 @@
 import gc
 import os
-import re
 import time
 
 import torch
 import torch.nn.functional as F
-from peft import LoraConfig, TaskType, get_peft_model
+from peft import LoraConfig, PeftModel, TaskType, get_peft_model
 from torch import bfloat16
 from torch.optim import AdamW
 from torch.utils.data import DataLoader
@@ -25,13 +24,15 @@ from src.latent_embedding_experiments.training.utils import (
     log_rollouts,
 )
 
+RESUME_FROM = "checkpoints/exp7_grpo_think/step_00500"
+
 APPROACHES = ""
 DATE = str(time.time()).split(".")[0]
 OUTPUT_DIR = "latent_embedding_experiments/checkpoints/exp7_grpo_think"
 LOG_FILE = f"latent_embedding_experiments/logs/rl_continuous_cot_{CFG.model_id.split('/')[-1]}_{DATE}.txt"
 
 LOG_EVERY = 1
-SAVE_EVERY = 250
+SAVE_EVERY = 100
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
@@ -51,17 +52,20 @@ base_model = AutoModelForCausalLM.from_pretrained(
 # W_eff = W_frozen + (alpha / r) * B @ A, whereas A.shape = (r, d_in) and B.shape = (d_out, r)
 # out = W_eff @ in = (W_frozen + (alpha / r) * B @ A) * in = W_frozen @ in + (alpha / r) * B @ (A @ in)
 
-lora_cfg = LoraConfig(
-    r=CFG.rl_config.lora_r,  # number of cols in lora matrices
-    lora_alpha=CFG.rl_config.lora_alpha,  # scalar that determines relative influence of the lora matrices on frozen base
-    target_modules=list(
-        ["c_attn", "c_proj", "c_fc"]
-        if CFG.model_id == "gpt2"
-        else CFG.rl_config.lora_targets
-    ),  # fine-tune all projections of the model, except for embedding matrices
-    task_type=TaskType.CAUSAL_LM,
-)
-model = get_peft_model(base_model, lora_cfg)
+if RESUME_FROM:
+    model = PeftModel.from_pretrained(base_model, RESUME_FROM, is_trainable=True)
+else:
+    lora_cfg = LoraConfig(
+        r=CFG.rl_config.lora_r,  # number of cols in lora matrices
+        lora_alpha=CFG.rl_config.lora_alpha,  # scalar that determines relative influence of the lora matrices on frozen base
+        target_modules=list(
+            ["c_attn", "c_proj", "c_fc"]
+            if (CFG.model_id == "gpt2" or CFG.model_id == "weiser/30M-0.4")
+            else CFG.rl_config.lora_targets
+        ),  # fine-tune all projections of the model, except for embedding matrices
+        task_type=TaskType.CAUSAL_LM,
+    )
+    model = get_peft_model(base_model, lora_cfg)
 
 device = model.device
 log(seq_log, f"Using {device}")
@@ -79,6 +83,18 @@ optimizer = AdamW(
     lr=CFG.rl_config.learning_rate,
     weight_decay=0.01,
 )
+
+start_step = 0
+if RESUME_FROM:
+    state_path = os.path.join(RESUME_FROM, "training_state.pt")
+    if os.path.exists(state_path):
+        state = torch.load(state_path, map_location="cpu")
+        optimizer.load_state_dict(state["optimizer"])
+        torch.set_rng_state(state["rng_state"])
+        start_step = state["step"] + 1
+        log(seq_log, f"Resumed from step {state['step']} ({RESUME_FROM})")
+    else:
+        log(seq_log, f"WARNING: No training_state.pt found in {RESUME_FROM}; starting from step 0")
 
 
 _TRIGGER_STRINGS = [
@@ -339,7 +355,7 @@ def policy_log_prob(rollout, approach, temp):
     return total_log_prob
 
 
-def train():
+def train(start_step: int = 0):
     approach = "token_sampling"
 
     data_iter = iter(
@@ -355,7 +371,7 @@ def train():
     t_start = time.perf_counter()
     t_window = t_start
 
-    for step in range(CFG.rl_config.max_update_steps):
+    for step in range(start_step, CFG.rl_config.max_update_steps):
         try:
             batch = next(data_iter)
         except StopIteration:
@@ -370,12 +386,6 @@ def train():
 
         for question, answer in zip(batch["question"], batch["answer"]):
             # rollouts
-            rss_gb, live_gb, driver_gb = get_memory_gb(device)
-            log(
-                seq_log,
-                f" | BEFORE | mem rss {rss_gb:.3f} live {live_gb:.3f} drv {driver_gb:.3f}GB",
-            )
-
             prompt = make_prompt(question)
 
             group_rollouts = [
@@ -386,7 +396,7 @@ def train():
             rss_gb, live_gb, driver_gb = get_memory_gb(device)
             log(
                 seq_log,
-                f" | AFTER | mem rss {rss_gb:.3f} live {live_gb:.3f} drv {driver_gb:.3f}GB",
+                f" | mem rss {rss_gb:.3f} live {live_gb:.3f} drv {driver_gb:.3f}GB",
             )
 
             group_rewards = torch.tensor(
@@ -478,8 +488,16 @@ def train():
             ckpt = os.path.join(OUTPUT_DIR, f"step_{step:05d}")
             model.save_pretrained(ckpt)
             tokenizer.save_pretrained(ckpt)
+            torch.save(
+                {
+                    "step": step,
+                    "optimizer": optimizer.state_dict(),
+                    "rng_state": torch.get_rng_state(),
+                },
+                os.path.join(ckpt, "training_state.pt"),
+            )
             log(seq_log, f"  -> saved {ckpt}")
 
 
 if __name__ == "__main__":
-    train()
+    train(start_step=start_step)
